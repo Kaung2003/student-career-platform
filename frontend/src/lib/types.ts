@@ -29,8 +29,42 @@ export interface StudentProfile {
   github: string | null;
   linkedin: string | null;
   website: string | null;
+  resumeUrl: string | null;
+  transcriptUrl: string | null;
   projects?: Project[];
 }
+
+export type CertStatus = "PLANNING" | "IN_PROGRESS" | "COMPLETED";
+
+export interface Certification {
+  id: string;
+  name: string;
+  provider: string | null;
+  examDate: string | null;
+  status: CertStatus;
+  notes: string | null;
+  resourceUrl: string | null;
+  createdAt: string;
+}
+
+export type InterviewCategory = "BEHAVIORAL" | "TECHNICAL" | "SITUATIONAL";
+
+export interface InterviewQuestion {
+  id: string;
+  category: InterviewCategory;
+  prompt: string;
+  tip: string | null;
+}
+
+export interface InterviewAttempt {
+  id: string;
+  answer: string;
+  feedback: string | null;
+  createdAt: string;
+  question: InterviewQuestion;
+}
+
+export type FeedbackType = "BUG" | "FEATURE" | "COMMENT";
 
 export interface PublicPortfolio {
   name: string;

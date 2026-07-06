@@ -2,6 +2,10 @@ import { useEffect, useState, type SubmitEvent } from "react";
 import { Navbar } from "../components/Navbar";
 import { api, ApiError } from "../lib/api";
 import type { StudentProfile } from "../lib/types";
+import { Card } from "../components/ui/Card";
+import { Field, inputClass } from "../components/ui/Field";
+import { Button } from "../components/ui/Button";
+import { FileUploadField } from "../components/ui/FileUploadField";
 
 export function Profile() {
   const [loading, setLoading] = useState(true);
@@ -18,6 +22,8 @@ export function Profile() {
   const [github, setGithub] = useState("");
   const [linkedin, setLinkedin] = useState("");
   const [website, setWebsite] = useState("");
+  const [resumeUrl, setResumeUrl] = useState("");
+  const [transcriptUrl, setTranscriptUrl] = useState("");
 
   useEffect(() => {
     api
@@ -34,6 +40,8 @@ export function Profile() {
         setGithub(p.github ?? "");
         setLinkedin(p.linkedin ?? "");
         setWebsite(p.website ?? "");
+        setResumeUrl(p.resumeUrl ?? "");
+        setTranscriptUrl(p.transcriptUrl ?? "");
       })
       .finally(() => setLoading(false));
   }, []);
@@ -58,6 +66,8 @@ export function Profile() {
         github: github.trim() || null,
         linkedin: linkedin.trim() || null,
         website: website.trim() || null,
+        resumeUrl: resumeUrl.trim() || null,
+        transcriptUrl: transcriptUrl.trim() || null,
       });
       setSlug(res.profile.slug);
       setSuccess(true);
@@ -70,131 +80,128 @@ export function Profile() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
         <Navbar />
-        <p className="p-10 text-gray-500">Loading...</p>
+        <p className="p-10 text-slate-500 dark:text-slate-400">Loading...</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
       <Navbar />
 
       <div className="mx-auto max-w-2xl px-4 py-8 sm:px-6 sm:py-10">
-        <h1 className="text-2xl font-semibold text-gray-900">Your profile</h1>
-        <p className="mt-1 text-gray-500">This information appears on your public portfolio page.</p>
+        <h1 className="text-2xl font-semibold text-slate-900 dark:text-slate-100">Your profile</h1>
+        <p className="mt-1 text-slate-500 dark:text-slate-400">
+          This information appears on your public portfolio page.
+        </p>
 
-        <form onSubmit={handleSubmit} className="mt-6 space-y-4 rounded-xl border border-gray-200 bg-white p-4 sm:p-6">
-          <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Portfolio URL</label>
-            <div className="flex items-center gap-2 text-sm text-gray-500">
-              <span>/p/</span>
+        <Card className="mt-6">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <Field label="Portfolio URL">
+              <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
+                <span>/p/</span>
+                <input type="text" value={slug} onChange={(e) => setSlug(e.target.value)} className={inputClass} />
+              </div>
+            </Field>
+
+            <Field label="Headline">
               <input
                 type="text"
-                value={slug}
-                onChange={(e) => setSlug(e.target.value)}
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-gray-900 focus:outline-none"
+                placeholder="e.g. Computer Science Student @ ABC University"
+                value={headline}
+                onChange={(e) => setHeadline(e.target.value)}
+                className={inputClass}
               />
+            </Field>
+
+            <Field label="Bio">
+              <textarea rows={4} value={bio} onChange={(e) => setBio(e.target.value)} className={inputClass} />
+            </Field>
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <Field label="School">
+                <input type="text" value={school} onChange={(e) => setSchool(e.target.value)} className={inputClass} />
+              </Field>
+              <Field label="Graduation year">
+                <input
+                  type="number"
+                  value={gradYear}
+                  onChange={(e) => setGradYear(e.target.value)}
+                  className={inputClass}
+                />
+              </Field>
             </div>
-          </div>
 
-          <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Headline</label>
-            <input
-              type="text"
-              placeholder="e.g. Computer Science Student @ ABC University"
-              value={headline}
-              onChange={(e) => setHeadline(e.target.value)}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-gray-900 focus:outline-none"
-            />
-          </div>
-
-          <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Bio</label>
-            <textarea
-              rows={4}
-              value={bio}
-              onChange={(e) => setBio(e.target.value)}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-gray-900 focus:outline-none"
-            />
-          </div>
-
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">School</label>
+            <Field label="Skills (comma-separated)">
               <input
                 type="text"
-                value={school}
-                onChange={(e) => setSchool(e.target.value)}
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-gray-900 focus:outline-none"
+                placeholder="React, TypeScript, PostgreSQL"
+                value={skills}
+                onChange={(e) => setSkills(e.target.value)}
+                className={inputClass}
               />
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">Graduation year</label>
-              <input
-                type="number"
-                value={gradYear}
-                onChange={(e) => setGradYear(e.target.value)}
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-gray-900 focus:outline-none"
-              />
-            </div>
-          </div>
+            </Field>
 
-          <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Skills (comma-separated)</label>
-            <input
-              type="text"
-              placeholder="React, TypeScript, PostgreSQL"
-              value={skills}
-              onChange={(e) => setSkills(e.target.value)}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-gray-900 focus:outline-none"
-            />
-          </div>
-
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">GitHub URL</label>
-              <input
-                type="text"
-                placeholder="https://github.com/you"
-                value={github}
-                onChange={(e) => setGithub(e.target.value)}
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-gray-900 focus:outline-none"
-              />
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <Field label="GitHub URL">
+                <input
+                  type="text"
+                  placeholder="https://github.com/you"
+                  value={github}
+                  onChange={(e) => setGithub(e.target.value)}
+                  className={inputClass}
+                />
+              </Field>
+              <Field label="LinkedIn URL">
+                <input
+                  type="text"
+                  placeholder="https://linkedin.com/in/you"
+                  value={linkedin}
+                  onChange={(e) => setLinkedin(e.target.value)}
+                  className={inputClass}
+                />
+              </Field>
+              <Field label="Website">
+                <input
+                  type="text"
+                  value={website}
+                  onChange={(e) => setWebsite(e.target.value)}
+                  className={inputClass}
+                />
+              </Field>
             </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">LinkedIn URL</label>
-              <input
-                type="text"
-                placeholder="https://linkedin.com/in/you"
-                value={linkedin}
-                onChange={(e) => setLinkedin(e.target.value)}
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-gray-900 focus:outline-none"
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">Website</label>
-              <input
-                type="text"
-                value={website}
-                onChange={(e) => setWebsite(e.target.value)}
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-gray-900 focus:outline-none"
-              />
-            </div>
-          </div>
 
-          {error && <p className="text-sm text-red-600">{error}</p>}
-          {success && <p className="text-sm text-green-600">Profile saved.</p>}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <Field label="Resume">
+                <FileUploadField
+                  value={resumeUrl}
+                  onChange={setResumeUrl}
+                  uploadType="resume"
+                  placeholder="Paste a URL or upload a PDF"
+                  accept="application/pdf"
+                />
+              </Field>
+              <Field label="Transcript">
+                <FileUploadField
+                  value={transcriptUrl}
+                  onChange={setTranscriptUrl}
+                  uploadType="transcript"
+                  placeholder="Paste a URL or upload a PDF"
+                  accept="application/pdf"
+                />
+              </Field>
+            </div>
 
-          <button
-            type="submit"
-            disabled={saving}
-            className="rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700 disabled:opacity-50"
-          >
-            {saving ? "Saving..." : "Save profile"}
-          </button>
-        </form>
+            {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+            {success && <p className="text-sm text-green-600 dark:text-green-400">Profile saved.</p>}
+
+            <Button type="submit" disabled={saving}>
+              {saving ? "Saving..." : "Save profile"}
+            </Button>
+          </form>
+        </Card>
       </div>
     </div>
   );

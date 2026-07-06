@@ -17,7 +17,8 @@ profileRouter.get("/me", async (req, res) => {
 });
 
 profileRouter.put("/me", async (req, res) => {
-  const { headline, bio, school, gradYear, skills, github, linkedin, website, slug } = req.body ?? {};
+  const { headline, bio, school, gradYear, skills, github, linkedin, website, slug, resumeUrl, transcriptUrl } =
+    req.body ?? {};
 
   if (skills !== undefined && (!Array.isArray(skills) || !skills.every((s: unknown) => typeof s === "string"))) {
     res.status(400).json({ error: "skills must be an array of strings" });
@@ -65,6 +66,8 @@ profileRouter.put("/me", async (req, res) => {
     ...(github !== undefined ? { github } : {}),
     ...(linkedin !== undefined ? { linkedin } : {}),
     ...(website !== undefined ? { website } : {}),
+    ...(resumeUrl !== undefined ? { resumeUrl } : {}),
+    ...(transcriptUrl !== undefined ? { transcriptUrl } : {}),
   };
 
   const profile = existing

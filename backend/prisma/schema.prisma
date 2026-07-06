@@ -18,6 +18,24 @@ enum Role {
   ADMIN
 }
 
+enum CertStatus {
+  PLANNING
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum InterviewCategory {
+  BEHAVIORAL
+  TECHNICAL
+  SITUATIONAL
+}
+
+enum FeedbackType {
+  BUG
+  FEATURE
+  COMMENT
+}
+
 model User {
   id        String   @id @default(cuid())
   name      String
@@ -25,10 +43,65 @@ model User {
   password  String
   role      Role     @default(STUDENT)
 
-  profile   StudentProfile?
+  profile           StudentProfile?
+  certifications    Certification[]
+  interviewAttempts InterviewAttempt[]
+  feedback          Feedback[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model Certification {
+  id          String     @id @default(cuid())
+  name        String
+  provider    String?
+  examDate    DateTime?
+  status      CertStatus @default(PLANNING)
+  notes       String?
+  resourceUrl String?
+
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
+model InterviewQuestion {
+  id       String             @id @default(cuid())
+  category InterviewCategory
+  prompt   String
+  tip      String?
+
+  attempts InterviewAttempt[]
+
+  createdAt DateTime @default(now())
+}
+
+model InterviewAttempt {
+  id       String  @id @default(cuid())
+  answer   String
+  feedback String?
+
+  question   InterviewQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  questionId String
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+
+  createdAt DateTime @default(now())
+}
+
+model Feedback {
+  id      String       @id @default(cuid())
+  type    FeedbackType
+  message String
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+
+  createdAt DateTime @default(now())
 }
 
 model StudentProfile {
@@ -43,6 +116,8 @@ model StudentProfile {
   github    String?
   linkedin  String?
   website   String?
+  resumeUrl String?
+  transcriptUrl String?
 
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId    String   @unique

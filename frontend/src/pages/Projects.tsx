@@ -2,6 +2,12 @@ import { useEffect, useState, type SubmitEvent } from "react";
 import { Navbar } from "../components/Navbar";
 import { api, ApiError } from "../lib/api";
 import type { Project } from "../lib/types";
+import { Card } from "../components/ui/Card";
+import { Field, inputClass } from "../components/ui/Field";
+import { Button } from "../components/ui/Button";
+import { Badge } from "../components/ui/Badge";
+import { EmptyState } from "../components/ui/EmptyState";
+import { FileUploadField } from "../components/ui/FileUploadField";
 
 const emptyForm = {
   title: "",
@@ -84,146 +90,152 @@ export function Projects() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
       <Navbar />
 
       <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-10">
-        <h1 className="text-2xl font-semibold text-gray-900">Projects</h1>
-        <p className="mt-1 text-gray-500">Showcase the work that appears on your public portfolio.</p>
+        <h1 className="text-2xl font-semibold text-slate-900 dark:text-slate-100">Projects</h1>
+        <p className="mt-1 text-slate-500 dark:text-slate-400">
+          Showcase the work that appears on your public portfolio.
+        </p>
 
-        <form
-          onSubmit={handleSubmit}
-          className="mt-6 space-y-4 rounded-xl border border-gray-200 bg-white p-4 sm:p-6"
-        >
-          <h2 className="font-medium text-gray-900">{editingId ? "Edit project" : "Add a project"}</h2>
+        <Card className="mt-6">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <h2 className="font-medium text-slate-900 dark:text-slate-100">
+              {editingId ? "Edit project" : "Add a project"}
+            </h2>
 
-          <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Title</label>
-            <input
-              type="text"
-              required
-              value={form.title}
-              onChange={(e) => setForm({ ...form, title: e.target.value })}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-gray-900 focus:outline-none"
-            />
-          </div>
-
-          <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Description</label>
-            <textarea
-              rows={3}
-              value={form.description}
-              onChange={(e) => setForm({ ...form, description: e.target.value })}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-gray-900 focus:outline-none"
-            />
-          </div>
-
-          <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Tech stack (comma-separated)</label>
-            <input
-              type="text"
-              placeholder="React, Node.js, PostgreSQL"
-              value={form.techStack}
-              onChange={(e) => setForm({ ...form, techStack: e.target.value })}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-gray-900 focus:outline-none"
-            />
-          </div>
-
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">Live URL</label>
+            <Field label="Title">
               <input
                 type="text"
-                value={form.projectUrl}
-                onChange={(e) => setForm({ ...form, projectUrl: e.target.value })}
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-gray-900 focus:outline-none"
+                required
+                value={form.title}
+                onChange={(e) => setForm({ ...form, title: e.target.value })}
+                className={inputClass}
               />
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">GitHub URL</label>
+            </Field>
+
+            <Field label="Description">
+              <textarea
+                rows={3}
+                value={form.description}
+                onChange={(e) => setForm({ ...form, description: e.target.value })}
+                className={inputClass}
+              />
+            </Field>
+
+            <Field label="Tech stack (comma-separated)">
               <input
                 type="text"
-                value={form.githubUrl}
-                onChange={(e) => setForm({ ...form, githubUrl: e.target.value })}
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-gray-900 focus:outline-none"
+                placeholder="React, Node.js, PostgreSQL"
+                value={form.techStack}
+                onChange={(e) => setForm({ ...form, techStack: e.target.value })}
+                className={inputClass}
               />
+            </Field>
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <Field label="Live URL">
+                <input
+                  type="text"
+                  value={form.projectUrl}
+                  onChange={(e) => setForm({ ...form, projectUrl: e.target.value })}
+                  className={inputClass}
+                />
+              </Field>
+              <Field label="GitHub URL">
+                <input
+                  type="text"
+                  value={form.githubUrl}
+                  onChange={(e) => setForm({ ...form, githubUrl: e.target.value })}
+                  className={inputClass}
+                />
+              </Field>
             </div>
-          </div>
 
-          <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Image URL</label>
-            <input
-              type="text"
-              value={form.imageUrl}
-              onChange={(e) => setForm({ ...form, imageUrl: e.target.value })}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-gray-900 focus:outline-none"
-            />
-          </div>
+            <Field label="Image">
+              <FileUploadField
+                value={form.imageUrl}
+                onChange={(url) => setForm({ ...form, imageUrl: url })}
+                uploadType="project-image"
+                placeholder="Paste a URL or upload an image"
+                accept="image/*"
+              />
+            </Field>
 
-          {error && <p className="text-sm text-red-600">{error}</p>}
+            {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
 
-          <div className="flex gap-3">
-            <button
-              type="submit"
-              disabled={saving}
-              className="rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700 disabled:opacity-50"
-            >
-              {saving ? "Saving..." : editingId ? "Update project" : "Add project"}
-            </button>
-            {editingId && (
-              <button
-                type="button"
-                onClick={cancelEdit}
-                className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-              >
-                Cancel
-              </button>
-            )}
-          </div>
-        </form>
+            <div className="flex gap-3">
+              <Button type="submit" disabled={saving}>
+                {saving ? "Saving..." : editingId ? "Update project" : "Add project"}
+              </Button>
+              {editingId && (
+                <Button type="button" variant="secondary" onClick={cancelEdit}>
+                  Cancel
+                </Button>
+              )}
+            </div>
+          </form>
+        </Card>
 
         <div className="mt-8 space-y-4">
-          {loading && <p className="text-gray-500">Loading...</p>}
+          {loading && <p className="text-slate-500 dark:text-slate-400">Loading...</p>}
           {!loading && projects.length === 0 && (
-            <p className="text-gray-500">No projects yet. Add your first one above.</p>
+            <EmptyState title="No projects yet" description="Add your first one above." />
           )}
 
           {projects.map((project) => (
-            <div key={project.id} className="rounded-xl border border-gray-200 bg-white p-4 sm:p-6">
+            <Card key={project.id}>
               <div className="flex items-start justify-between gap-3">
-                <h3 className="font-medium text-gray-900">{project.title}</h3>
+                <h3 className="font-medium text-slate-900 dark:text-slate-100">{project.title}</h3>
                 <div className="flex shrink-0 gap-3 text-sm">
-                  <button onClick={() => startEdit(project)} className="text-gray-600 hover:text-gray-900">
+                  <button
+                    onClick={() => startEdit(project)}
+                    className="text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
+                  >
                     Edit
                   </button>
-                  <button onClick={() => handleDelete(project.id)} className="text-red-600 hover:text-red-800">
+                  <button
+                    onClick={() => handleDelete(project.id)}
+                    className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
+                  >
                     Delete
                   </button>
                 </div>
               </div>
-              {project.description && <p className="mt-1 text-sm text-gray-600">{project.description}</p>}
+              {project.description && (
+                <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">{project.description}</p>
+              )}
               {project.techStack.length > 0 && (
                 <div className="mt-2 flex flex-wrap gap-2">
                   {project.techStack.map((tech) => (
-                    <span key={tech} className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-700">
-                      {tech}
-                    </span>
+                    <Badge key={tech}>{tech}</Badge>
                   ))}
                 </div>
               )}
               <div className="mt-3 flex gap-4 text-sm">
                 {project.projectUrl && (
-                  <a href={project.projectUrl} target="_blank" rel="noreferrer" className="text-gray-900 underline">
+                  <a
+                    href={project.projectUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-blue-600 hover:underline dark:text-blue-400"
+                  >
                     Live
                   </a>
                 )}
                 {project.githubUrl && (
-                  <a href={project.githubUrl} target="_blank" rel="noreferrer" className="text-gray-900 underline">
+                  <a
+                    href={project.githubUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-blue-600 hover:underline dark:text-blue-400"
+                  >
                     GitHub
                   </a>
                 )}
               </div>
-            </div>
+            </Card>
           ))}
         </div>
       </div>
