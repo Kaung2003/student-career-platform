@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { requireAuth } from "../middleware/require-auth.js";
 import { prisma } from "../lib/prisma.js";
-import { getAnthropicClient, isAiConfigured } from "../lib/anthropic.js";
+import { complete, isAiConfigured } from "../lib/ai.js";
 
 export const chatRouter = Router();
 
@@ -65,15 +65,7 @@ chatRouter.post("/message", async (req, res) => {
       : `${SYSTEM_PROMPT}\n\nThe student hasn't set up their profile yet.`;
 
   try {
-    const client = getAnthropicClient();
-    const response = await client.messages.create({
-      model: "claude-opus-4-8",
-      max_tokens: 1024,
-      system,
-      messages: [...((history as ChatMessage[]) ?? []), { role: "user", content: message }],
-    });
-
-    const reply = response.content.find((block) => block.type === "text")?.text ?? "";
+    const reply = await complete(system, [...((history as ChatMessage[]) ?? []), { role: "user", content: message }]);
     res.json({ reply });
   } catch (err) {
     console.error("Chat request failed:", err);

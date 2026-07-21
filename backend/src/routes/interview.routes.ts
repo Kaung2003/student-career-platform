@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { requireAuth } from "../middleware/require-auth.js";
 import { prisma } from "../lib/prisma.js";
-import { getAnthropicClient, isAiConfigured } from "../lib/anthropic.js";
+import { complete, isAiConfigured } from "../lib/ai.js";
 
 export const interviewRouter = Router();
 
@@ -63,21 +63,15 @@ interviewRouter.post("/practice", async (req, res) => {
   }
 
   try {
-    const client = getAnthropicClient();
-    const response = await client.messages.create({
-      model: "claude-opus-4-8",
-      max_tokens: 1024,
-      system:
-        "You are an interview coach. Give the candidate direct, specific feedback on their practice answer: what worked, what to improve, and one concrete suggestion to strengthen it. Keep it to a short paragraph.",
-      messages: [
+    const feedback = await complete(
+      "You are an interview coach. Give the candidate direct, specific feedback on their practice answer: what worked, what to improve, and one concrete suggestion to strengthen it. Keep it to a short paragraph.",
+      [
         {
           role: "user",
           content: `Interview question (${question.category.toLowerCase()}): ${question.prompt}\n\nCandidate's answer:\n${answer}`,
         },
       ],
-    });
-
-    const feedback = response.content.find((block) => block.type === "text")?.text ?? null;
+    );
 
     const attempt = await prisma.interviewAttempt.create({
       data: { questionId, answer, feedback, userId: req.auth!.userId },
