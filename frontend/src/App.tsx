@@ -11,6 +11,7 @@ import { Certifications } from "./pages/Certifications";
 import { InterviewPractice } from "./pages/InterviewPractice";
 import { Feedback } from "./pages/Feedback";
 import { PublicPortfolio } from "./pages/PublicPortfolio";
+import { Directory } from "./pages/Directory";
 
 function App() {
   return (
@@ -21,6 +22,7 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/p/:slug" element={<PublicPortfolio />} />
+          <Route path="/directory" element={<Directory />} />
 
           <Route
             path="/dashboard"

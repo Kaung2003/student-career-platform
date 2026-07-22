@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { requireAuth } from "../middleware/require-auth.js";
 import { prisma } from "../lib/prisma.js";
-import { slugify } from "../lib/slugify.js";
+import { slugify, uniqueSlugFrom } from "../lib/slugify.js";
 
 export const profileRouter = Router();
 
@@ -40,14 +40,7 @@ profileRouter.put("/me", async (req, res) => {
   const existing = await prisma.studentProfile.findUnique({ where: { userId: user.id } });
 
   if (!existing) {
-    const baseSlug = desiredSlug ?? slugify(user.name) ?? "student";
-    let candidate = baseSlug;
-    let attempt = 0;
-    while (await prisma.studentProfile.findUnique({ where: { slug: candidate } })) {
-      attempt += 1;
-      candidate = `${baseSlug}-${attempt}`;
-    }
-    desiredSlug = candidate;
+    desiredSlug = await uniqueSlugFrom(desiredSlug ?? slugify(user.name));
   } else if (desiredSlug && desiredSlug !== existing.slug) {
     const clash = await prisma.studentProfile.findUnique({ where: { slug: desiredSlug } });
     if (clash) {

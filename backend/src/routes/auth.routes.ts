@@ -3,6 +3,7 @@ import { Router } from "express";
 import { requireAuth } from "../middleware/require-auth.js";
 import { prisma } from "../lib/prisma.js";
 import { signAuthToken } from "../lib/jwt.js";
+import { slugify, uniqueSlugFrom } from "../lib/slugify.js";
 import { Role } from "../generated/prisma/enums.js";
 
 const SALT_ROUNDS = 10;
@@ -33,6 +34,9 @@ authRouter.post("/register", async (req, res) => {
   const user = await prisma.user.create({
     data: { name, email, password: hashedPassword, role },
   });
+
+  const slug = await uniqueSlugFrom(slugify(name));
+  await prisma.studentProfile.create({ data: { userId: user.id, slug } });
 
   const token = signAuthToken({ userId: user.id, role: user.role });
 

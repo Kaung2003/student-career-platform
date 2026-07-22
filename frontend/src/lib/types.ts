@@ -67,6 +67,7 @@ export interface InterviewAttempt {
 export type FeedbackType = "BUG" | "FEATURE" | "COMMENT";
 
 export interface PublicPortfolio {
+  userId: string;
   name: string;
   slug: string;
   headline: string | null;
@@ -78,4 +79,21 @@ export interface PublicPortfolio {
   linkedin: string | null;
   website: string | null;
   projects: Project[];
+}
+
+export interface DirectoryEntry {
+  name: string;
+  slug: string;
+  headline: string | null;
+  school: string | null;
+  gradYear: number | null;
+  skills: string[];
+}
+
+export interface ProfileComment {
+  id: string;
+  body: string;
+  authorId: string;
+  authorName: string;
+  createdAt: string;
 }

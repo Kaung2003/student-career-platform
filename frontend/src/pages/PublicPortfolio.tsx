@@ -1,15 +1,31 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type SubmitEvent } from "react";
 import { useParams } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 import { api, ApiError } from "../lib/api";
-import type { PublicPortfolio as PublicPortfolioData } from "../lib/types";
+import type { PublicPortfolio as PublicPortfolioData, ProfileComment } from "../lib/types";
 import { Card } from "../components/ui/Card";
 import { Badge } from "../components/ui/Badge";
+import { Button } from "../components/ui/Button";
+import { EmptyState } from "../components/ui/EmptyState";
 
 export function PublicPortfolio() {
   const { slug } = useParams<{ slug: string }>();
+  const { user } = useAuth();
   const [data, setData] = useState<PublicPortfolioData | null>(null);
   const [notFound, setNotFound] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [comments, setComments] = useState<ProfileComment[]>([]);
+  const [commentText, setCommentText] = useState("");
+  const [posting, setPosting] = useState(false);
+  const [commentError, setCommentError] = useState<string | null>(null);
+
+  function loadComments() {
+    if (!slug) return Promise.resolve();
+    return api
+      .get<{ comments: ProfileComment[] }>(`/public/${slug}/comments`)
+      .then((res) => setComments(res.comments))
+      .catch(() => {});
+  }
 
   useEffect(() => {
     if (!slug) return;
@@ -23,7 +39,38 @@ export function PublicPortfolio() {
         }
       })
       .finally(() => setLoading(false));
+
+    loadComments();
   }, [slug]);
+
+  async function handleCommentSubmit(e: SubmitEvent) {
+    e.preventDefault();
+    if (!slug || commentText.trim().length === 0) return;
+
+    setCommentError(null);
+    setPosting(true);
+
+    try {
+      await api.post(`/public/${slug}/comments`, { body: commentText.trim() });
+      setCommentText("");
+      await loadComments();
+    } catch (err) {
+      setCommentError(err instanceof ApiError ? err.message : "Failed to post comment");
+    } finally {
+      setPosting(false);
+    }
+  }
+
+  async function handleCommentDelete(commentId: string) {
+    if (!slug || !confirm("Delete this comment?")) return;
+
+    try {
+      await api.delete(`/public/${slug}/comments/${commentId}`);
+      await loadComments();
+    } catch (err) {
+      setCommentError(err instanceof ApiError ? err.message : "Failed to delete comment");
+    }
+  }
 
   if (loading) {
     return (
@@ -136,6 +183,59 @@ export function PublicPortfolio() {
                   </a>
                 )}
               </div>
+            </Card>
+          ))}
+        </div>
+
+        <h2 className="mt-10 text-xl font-semibold text-slate-900 dark:text-slate-100">Comments</h2>
+
+        {user ? (
+          <form onSubmit={handleCommentSubmit} className="mt-4 space-y-2">
+            <textarea
+              rows={3}
+              placeholder={`Leave a comment for ${data.name}...`}
+              value={commentText}
+              onChange={(e) => setCommentText(e.target.value)}
+              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 transition focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-500"
+            />
+            {commentError && <p className="text-sm text-red-600 dark:text-red-400">{commentError}</p>}
+            <Button type="submit" disabled={posting || commentText.trim().length === 0}>
+              {posting ? "Posting..." : "Post comment"}
+            </Button>
+          </form>
+        ) : (
+          <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">
+            <a href="/login" className="text-blue-600 hover:underline dark:text-blue-400">
+              Log in
+            </a>{" "}
+            to leave a comment.
+          </p>
+        )}
+
+        <div className="mt-6 space-y-4">
+          {comments.length === 0 && (
+            <EmptyState title="No comments yet" description="Be the first to leave feedback on this portfolio." />
+          )}
+
+          {comments.map((comment) => (
+            <Card key={comment.id}>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="font-medium text-slate-900 dark:text-slate-100">{comment.authorName}</p>
+                  <p className="text-xs text-slate-400 dark:text-slate-500">
+                    {new Date(comment.createdAt).toLocaleDateString()}
+                  </p>
+                </div>
+                {user && (user.id === comment.authorId || user.id === data.userId) && (
+                  <button
+                    onClick={() => handleCommentDelete(comment.id)}
+                    className="text-sm text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
+                  >
+                    Delete
+                  </button>
+                )}
+              </div>
+              <p className="mt-2 whitespace-pre-line text-sm text-slate-700 dark:text-slate-300">{comment.body}</p>
             </Card>
           ))}
         </div>

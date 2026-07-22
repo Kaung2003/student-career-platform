@@ -47,6 +47,7 @@ model User {
   certifications    Certification[]
   interviewAttempts InterviewAttempt[]
   feedback          Feedback[]
+  comments          Comment[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -123,9 +124,23 @@ model StudentProfile {
   userId    String   @unique
 
   projects  Project[]
+  comments  Comment[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model Comment {
+  id   String @id @default(cuid())
+  body String
+
+  profile   StudentProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  profileId String
+
+  author   User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  authorId String
+
+  createdAt DateTime @default(now())
 }
 
 model Project {
