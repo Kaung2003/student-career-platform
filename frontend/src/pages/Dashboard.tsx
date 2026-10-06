@@ -1,188 +1,334 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { Navbar } from "../components/Navbar";
-import { Card } from "../components/ui/Card";
-import { IconChip } from "../components/ui/IconChip";
 import { useAuth } from "../context/AuthContext";
+import { useUi } from "../context/UiContext";
 import { api } from "../lib/api";
-import type { Certification, StudentProfile } from "../lib/types";
+import type { Certification, InterviewAttempt, StudentProfile } from "../lib/types";
+import { completenessScore, profileChecklist } from "../lib/profile";
+import { Card } from "../components/ui/Card";
+import { ProgressRing } from "../components/ui/ProgressRing";
+import { Skeleton } from "../components/ui/Skeleton";
+import { Badge } from "../components/ui/Badge";
+import {
+  ArrowRightIcon,
+  AwardIcon,
+  CalendarIcon,
+  CheckIcon,
+  CopyIcon,
+  ExternalLinkIcon,
+  FolderIcon,
+  MicIcon,
+  PlusIcon,
+  SparklesIcon,
+  type IconComponent,
+} from "../components/icons";
 
-function ProfileIcon() {
+function greeting() {
+  const hour = new Date().getHours();
+  if (hour < 12) return "Good morning";
+  if (hour < 18) return "Good afternoon";
+  return "Good evening";
+}
+
+function daysUntil(date: string) {
+  const ms = new Date(date).setHours(0, 0, 0, 0) - new Date().setHours(0, 0, 0, 0);
+  return Math.round(ms / 86400000);
+}
+
+function StatCard({
+  label,
+  value,
+  sub,
+  icon: Icon,
+  tone,
+  to,
+}: {
+  label: string;
+  value: ReactNode;
+  sub: string;
+  icon: IconComponent;
+  tone: string;
+  to: string;
+}) {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-5 w-5">
-      <circle cx="12" cy="8" r="4" />
-      <path strokeLinecap="round" d="M4 20c0-4 3.5-6 8-6s8 2 8 6" />
-    </svg>
+    <Link to={to} className="group">
+      <Card className="h-full transition group-hover:-translate-y-0.5 group-hover:shadow-md">
+        <div className="flex items-start justify-between">
+          <p className="text-xs font-medium text-slate-500 sm:text-sm dark:text-slate-400">{label}</p>
+          <div className={`hidden h-9 w-9 sm:flex items-center justify-center rounded-lg ${tone}`}>
+            <Icon className="h-[18px] w-[18px]" />
+          </div>
+        </div>
+        <p className="mt-3 text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl dark:text-white">{value}</p>
+        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{sub}</p>
+      </Card>
+    </Link>
   );
 }
 
-function ProjectsIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-5 w-5">
-      <rect x="3" y="4" width="18" height="14" rx="2" />
-      <path strokeLinecap="round" d="M3 9h18" />
-    </svg>
-  );
-}
-
-function LinkIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-5 w-5">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M10 13a5 5 0 007.07 0l2-2a5 5 0 00-7.07-7.07l-1 1" />
-      <path strokeLinecap="round" strokeLinejoin="round" d="M14 11a5 5 0 00-7.07 0l-2 2a5 5 0 007.07 7.07l1-1" />
-    </svg>
-  );
-}
-
-function CertificationIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-5 w-5">
-      <circle cx="12" cy="9" r="5" />
-      <path strokeLinecap="round" strokeLinejoin="round" d="M9 13.5L7 21l5-2.5L17 21l-2-7.5" />
-    </svg>
-  );
-}
-
-function InterviewIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-5 w-5">
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"
-      />
-    </svg>
-  );
-}
-
-function FeedbackIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-5 w-5">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M12 20h.01M8 16h8a2 2 0 002-2V6a2 2 0 00-2-2H8a2 2 0 00-2 2v13l4-3z" />
-    </svg>
-  );
+function scoreFrom(feedback: string | null) {
+  const match = feedback ? /Score:\s*(\d+)\s*\/\s*10/i.exec(feedback) : null;
+  return match ? Number(match[1]) : null;
 }
 
 export function Dashboard() {
   const { user } = useAuth();
+  const { toast } = useUi();
   const [profile, setProfile] = useState<StudentProfile | null>(null);
   const [certifications, setCertifications] = useState<Certification[]>([]);
+  const [attempts, setAttempts] = useState<InterviewAttempt[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api
-      .get<{ profile: StudentProfile | null }>("/profile/me")
-      .then((res) => setProfile(res.profile))
+    Promise.all([
+      api.get<{ profile: StudentProfile | null }>("/profile/me").then((res) => setProfile(res.profile)),
+      api.get<{ certifications: Certification[] }>("/certifications").then((res) => setCertifications(res.certifications)),
+      api.get<{ attempts: InterviewAttempt[] }>("/interview/attempts").then((res) => setAttempts(res.attempts)),
+    ])
+      .catch(() => {})
       .finally(() => setLoading(false));
-    api
-      .get<{ certifications: Certification[] }>("/certifications")
-      .then((res) => setCertifications(res.certifications))
-      .catch(() => {});
   }, []);
 
-  const projectCount = profile?.projects?.length ?? 0;
-  const certCount = certifications.length;
+  const checklist = profileChecklist(profile, certifications.length);
+  const score = completenessScore(checklist);
+  const projects = profile?.projects ?? [];
+  const completedCerts = certifications.filter((c) => c.status === "COMPLETED").length;
+  const upcoming = certifications
+    .filter((c) => c.examDate && c.status !== "COMPLETED" && daysUntil(c.examDate) >= 0)
+    .sort((a, b) => new Date(a.examDate!).getTime() - new Date(b.examDate!).getTime())
+    .slice(0, 3);
+  const scores = attempts.map((a) => scoreFrom(a.feedback)).filter((s): s is number => s !== null);
+  const avgScore = scores.length ? (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1) : null;
+  const portfolioUrl = profile ? `${window.location.origin}/p/${profile.slug}` : "";
+
+  function copyLink() {
+    void navigator.clipboard.writeText(portfolioUrl).then(() => toast("Portfolio link copied"));
+  }
+
+  const today = new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
-      <Navbar />
-
-      <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-10">
-        <h1 className="text-2xl font-semibold text-slate-900 dark:text-slate-100">Welcome, {user?.name}</h1>
-        <p className="mt-1 text-slate-500 dark:text-slate-400">Here's an overview of your portfolio.</p>
-
-        {!loading && !profile && (
-          <div className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 p-4 sm:p-6 dark:border-amber-500/20 dark:bg-amber-500/10">
-            <h2 className="font-medium text-amber-900 dark:text-amber-200">Set up your profile</h2>
-            <p className="mt-1 text-sm text-amber-800 dark:text-amber-300/80">
-              You haven't created your student profile yet. Add a headline, bio, and skills to get your public
-              portfolio page live.
-            </p>
-            <Link
-              to="/profile"
-              className="mt-3 inline-block rounded-lg bg-amber-900 px-4 py-2 text-sm font-medium text-white hover:bg-amber-800 dark:bg-amber-600 dark:hover:bg-amber-500"
+    <div className="space-y-8">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{today}</p>
+          <h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl dark:text-white">
+            {greeting()}, {user?.name.split(" ")[0]} 👋
+          </h1>
+        </div>
+        {profile && (
+          <div className="flex gap-2">
+            <button
+              onClick={copyLink}
+              className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
             >
-              Create profile
-            </Link>
+              <CopyIcon className="h-4 w-4" /> Copy link
+            </button>
+            <a
+              href={`/p/${profile.slug}`}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white shadow-sm shadow-blue-600/20 transition hover:bg-blue-700"
+            >
+              View portfolio <ExternalLinkIcon className="h-4 w-4" />
+            </a>
           </div>
         )}
+      </div>
 
-        <div className="mt-6 grid gap-4 sm:grid-cols-3">
-          <Link to="/profile">
-            <Card className="h-full transition hover:shadow-md hover:-translate-y-0.5">
-              <IconChip>
-                <ProfileIcon />
-              </IconChip>
-              <h2 className="mt-4 font-medium text-slate-900 dark:text-slate-100">Profile</h2>
-              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                {profile ? "Edit your headline, bio, and links" : "Not set up yet"}
-              </p>
-            </Card>
-          </Link>
-
-          <Link to="/projects">
-            <Card className="h-full transition hover:shadow-md hover:-translate-y-0.5">
-              <IconChip>
-                <ProjectsIcon />
-              </IconChip>
-              <h2 className="mt-4 font-medium text-slate-900 dark:text-slate-100">Projects</h2>
-              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                {projectCount} project{projectCount === 1 ? "" : "s"}
-              </p>
-            </Card>
-          </Link>
-
-          <Card className="h-full">
-            <IconChip>
-              <LinkIcon />
-            </IconChip>
-            <h2 className="mt-4 font-medium text-slate-900 dark:text-slate-100">Public portfolio</h2>
-            {profile ? (
-              <a
-                href={`/p/${profile.slug}`}
-                target="_blank"
-                rel="noreferrer"
-                className="mt-1 inline-block text-sm text-blue-600 hover:underline dark:text-blue-400"
-              >
-                /p/{profile.slug}
-              </a>
-            ) : (
-              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Available after you create a profile</p>
-            )}
-          </Card>
-
-          <Link to="/certifications">
-            <Card className="h-full transition hover:shadow-md hover:-translate-y-0.5">
-              <IconChip>
-                <CertificationIcon />
-              </IconChip>
-              <h2 className="mt-4 font-medium text-slate-900 dark:text-slate-100">Certifications</h2>
-              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                {certCount} tracked
-              </p>
-            </Card>
-          </Link>
-
-          <Link to="/interview">
-            <Card className="h-full transition hover:shadow-md hover:-translate-y-0.5">
-              <IconChip>
-                <InterviewIcon />
-              </IconChip>
-              <h2 className="mt-4 font-medium text-slate-900 dark:text-slate-100">Interview practice</h2>
-              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Practice with AI feedback</p>
-            </Card>
-          </Link>
-
-          <Link to="/feedback">
-            <Card className="h-full transition hover:shadow-md hover:-translate-y-0.5">
-              <IconChip>
-                <FeedbackIcon />
-              </IconChip>
-              <h2 className="mt-4 font-medium text-slate-900 dark:text-slate-100">Feedback</h2>
-              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Report a bug or suggest a feature</p>
-            </Card>
-          </Link>
+      {loading ? (
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+          {[0, 1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-32" />
+          ))}
         </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+          <StatCard
+            label="Projects"
+            value={projects.length}
+            sub={projects.length ? "Showcased on your portfolio" : "Add your first project"}
+            icon={FolderIcon}
+            tone="bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400"
+            to="/projects"
+          />
+          <StatCard
+            label="Certifications"
+            value={`${completedCerts}/${certifications.length}`}
+            sub="Completed / tracked"
+            icon={AwardIcon}
+            tone="bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400"
+            to="/certifications"
+          />
+          <StatCard
+            label="Interview practice"
+            value={attempts.length}
+            sub={avgScore ? `Average score ${avgScore}/10` : "Answers practiced"}
+            icon={MicIcon}
+            tone="bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-400"
+            to="/interview"
+          />
+          <StatCard
+            label="Skills"
+            value={profile?.skills.length ?? 0}
+            sub="Listed on your profile"
+            icon={SparklesIcon}
+            tone="bg-violet-50 text-violet-600 dark:bg-violet-500/10 dark:text-violet-400"
+            to="/profile"
+          />
+        </div>
+      )}
+
+      <div className="grid gap-6 lg:grid-cols-3">
+        <Card className="lg:col-span-2">
+          <div className="flex flex-col gap-6 sm:flex-row sm:items-center">
+            <ProgressRing value={loading ? 0 : score} size={112} stroke={10} />
+            <div className="flex-1">
+              <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Portfolio strength</h2>
+              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                {score === 100
+                  ? "Your portfolio is complete — great work! Keep it fresh with new projects."
+                  : "Complete these steps to make your portfolio stand out to recruiters."}
+              </p>
+            </div>
+          </div>
+          <ul className="mt-6 grid gap-2 sm:grid-cols-2">
+            {checklist.map((item) => (
+              <li key={item.label}>
+                <Link
+                  to={item.to}
+                  className={`flex items-center gap-3 rounded-lg border px-3 py-2.5 text-sm transition ${
+                    item.done
+                      ? "border-transparent bg-slate-50 text-slate-400 dark:bg-slate-800/40 dark:text-slate-500"
+                      : "border-slate-200 text-slate-700 hover:border-blue-300 hover:bg-blue-50/50 dark:border-slate-800 dark:text-slate-300 dark:hover:border-blue-500/40 dark:hover:bg-blue-500/5"
+                  }`}
+                >
+                  <span
+                    className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full ${
+                      item.done ? "bg-emerald-500 text-white" : "border-2 border-slate-300 dark:border-slate-600"
+                    }`}
+                  >
+                    {item.done && <CheckIcon className="h-3 w-3" strokeWidth={3} />}
+                  </span>
+                  <span className={item.done ? "line-through" : ""}>{item.label}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </Card>
+
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-violet-600 via-blue-600 to-indigo-700 p-6 text-white shadow-lg shadow-blue-600/20">
+          <div className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/10 blur-2xl" />
+          <div className="relative flex h-full flex-col">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/15">
+              <SparklesIcon className="h-5 w-5" />
+            </div>
+            <h2 className="mt-4 text-lg font-semibold">AI Career Assistant</h2>
+            <p className="mt-1 text-sm text-white/80">
+              Get personalized advice on your resume, projects, and interviews — it already knows your profile.
+            </p>
+            <div className="mt-4 flex-1 space-y-2">
+              {["Review my portfolio", "Write a resume bullet", "Run a mock interview"].map((s) => (
+                <Link
+                  key={s}
+                  to="/assistant"
+                  className="block rounded-lg bg-white/10 px-3 py-2 text-sm transition hover:bg-white/20"
+                >
+                  “{s}”
+                </Link>
+              ))}
+            </div>
+            <Link
+              to="/assistant"
+              className="mt-5 inline-flex items-center justify-center gap-2 rounded-lg bg-white px-4 py-2.5 text-sm font-semibold text-blue-700 transition hover:bg-blue-50"
+            >
+              Start a chat <ArrowRightIcon className="h-4 w-4" />
+            </Link>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-3">
+        <Card>
+          <div className="flex items-center justify-between">
+            <h2 className="font-semibold text-slate-900 dark:text-white">Upcoming exams</h2>
+            <Link to="/certifications" className="text-xs font-medium text-blue-600 hover:underline dark:text-blue-400">
+              View all
+            </Link>
+          </div>
+          {upcoming.length === 0 ? (
+            <div className="mt-6 text-center">
+              <CalendarIcon className="mx-auto h-8 w-8 text-slate-300 dark:text-slate-600" />
+              <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">No upcoming exams scheduled.</p>
+              <Link to="/certifications" className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-blue-600 dark:text-blue-400">
+                <PlusIcon className="h-4 w-4" /> Add certification
+              </Link>
+            </div>
+          ) : (
+            <ul className="mt-4 space-y-3">
+              {upcoming.map((c) => {
+                const days = daysUntil(c.examDate!);
+                return (
+                  <li key={c.id} className="flex items-center gap-3">
+                    <div className="flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-800">
+                      <span className="text-[10px] font-semibold uppercase text-slate-500 dark:text-slate-400">
+                        {new Date(c.examDate!).toLocaleDateString(undefined, { month: "short" })}
+                      </span>
+                      <span className="text-sm font-bold leading-none text-slate-900 dark:text-white">
+                        {new Date(c.examDate!).getDate()}
+                      </span>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-slate-900 dark:text-slate-100">{c.name}</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">{c.provider ?? "Certification"}</p>
+                    </div>
+                    <Badge tone={days <= 7 ? "red" : days <= 30 ? "amber" : "slate"}>
+                      {days === 0 ? "Today" : `${days}d`}
+                    </Badge>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </Card>
+
+        <Card className="lg:col-span-2">
+          <div className="flex items-center justify-between">
+            <h2 className="font-semibold text-slate-900 dark:text-white">Recent interview practice</h2>
+            <Link to="/interview" className="text-xs font-medium text-blue-600 hover:underline dark:text-blue-400">
+              Practice now
+            </Link>
+          </div>
+          {attempts.length === 0 ? (
+            <div className="mt-6 text-center">
+              <MicIcon className="mx-auto h-8 w-8 text-slate-300 dark:text-slate-600" />
+              <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+                You haven't practiced yet. Answer a question and get instant AI feedback.
+              </p>
+              <Link to="/interview" className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-blue-600 dark:text-blue-400">
+                Start practicing <ArrowRightIcon className="h-4 w-4" />
+              </Link>
+            </div>
+          ) : (
+            <ul className="mt-4 divide-y divide-slate-100 dark:divide-slate-800">
+              {attempts.slice(0, 4).map((a) => {
+                const s = scoreFrom(a.feedback);
+                return (
+                  <li key={a.id} className="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-slate-900 dark:text-slate-100">{a.question.prompt}</p>
+                      <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+                        {a.question.category.charAt(0) + a.question.category.slice(1).toLowerCase()} ·{" "}
+                        {new Date(a.createdAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                    {s !== null && <Badge tone={s >= 8 ? "green" : s >= 5 ? "amber" : "red"}>{s}/10</Badge>}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </Card>
       </div>
     </div>
   );

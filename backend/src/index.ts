@@ -10,14 +10,23 @@ import { uploadRouter } from "./routes/upload.routes.js";
 import { certificationRouter } from "./routes/certification.routes.js";
 import { interviewRouter } from "./routes/interview.routes.js";
 import { feedbackRouter } from "./routes/feedback.routes.js";
+import { isAiConfigured } from "./lib/ai.js";
+import { isStorageConfigured } from "./lib/storage.js";
 
 const app = express();
 
-app.use(cors());
+const allowedOrigins = process.env["CORS_ORIGIN"]
+  ?.split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
+app.set("trust proxy", 1);
+app.disable("x-powered-by");
+app.use(cors(allowedOrigins?.length ? { origin: allowedOrigins } : {}));
 app.use(express.json());
 
 app.get("/health", (_req, res) => {
-  res.json({ status: "ok" });
+  res.json({ status: "ok", ai: isAiConfigured(), storage: isStorageConfigured() });
 });
 
 app.use("/api/auth", authRouter);

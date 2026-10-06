@@ -1,7 +1,9 @@
-import { Navigate, Route, Routes } from "react-router-dom";
+import { Route, Routes } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import { ThemeProvider } from "./context/ThemeContext";
-import { ProtectedRoute } from "./components/ProtectedRoute";
+import { UiProvider } from "./context/UiContext";
+import { ChatProvider } from "./context/ChatContext";
+import { OptionalAuthRoute, ProtectedRoute } from "./components/ProtectedRoute";
 import { Login } from "./pages/Login";
 import { Register } from "./pages/Register";
 import { Dashboard } from "./pages/Dashboard";
@@ -12,70 +14,41 @@ import { InterviewPractice } from "./pages/InterviewPractice";
 import { Feedback } from "./pages/Feedback";
 import { PublicPortfolio } from "./pages/PublicPortfolio";
 import { Directory } from "./pages/Directory";
+import { Landing } from "./pages/Landing";
+import { NotFound } from "./pages/NotFound";
+import { Assistant } from "./pages/Assistant";
 
 function App() {
   return (
     <ThemeProvider>
-      <AuthProvider>
-        <Routes>
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/p/:slug" element={<PublicPortfolio />} />
-          <Route path="/directory" element={<Directory />} />
+      <UiProvider>
+        <AuthProvider>
+          <ChatProvider>
+            <Routes>
+              <Route path="/" element={<Landing />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
+              <Route path="/p/:slug" element={<PublicPortfolio />} />
 
-          <Route
-            path="/dashboard"
-            element={
-              <ProtectedRoute>
-                <Dashboard />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/profile"
-            element={
-              <ProtectedRoute>
-                <Profile />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/projects"
-            element={
-              <ProtectedRoute>
-                <Projects />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/certifications"
-            element={
-              <ProtectedRoute>
-                <Certifications />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/interview"
-            element={
-              <ProtectedRoute>
-                <InterviewPractice />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/feedback"
-            element={
-              <ProtectedRoute>
-                <Feedback />
-              </ProtectedRoute>
-            }
-          />
+              <Route element={<OptionalAuthRoute />}>
+                <Route path="/directory" element={<Directory />} />
+              </Route>
 
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
-        </Routes>
-      </AuthProvider>
+              <Route element={<ProtectedRoute />}>
+                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/assistant" element={<Assistant />} />
+                <Route path="/profile" element={<Profile />} />
+                <Route path="/projects" element={<Projects />} />
+                <Route path="/certifications" element={<Certifications />} />
+                <Route path="/interview" element={<InterviewPractice />} />
+                <Route path="/feedback" element={<Feedback />} />
+              </Route>
+
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </ChatProvider>
+        </AuthProvider>
+      </UiProvider>
     </ThemeProvider>
   );
 }

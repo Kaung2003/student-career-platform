@@ -78,6 +78,8 @@ export interface PublicPortfolio {
   github: string | null;
   linkedin: string | null;
   website: string | null;
+  resumeUrl: string | null;
+  certifications: { id: string; name: string; provider: string | null; examDate: string | null }[];
   projects: Project[];
 }
 

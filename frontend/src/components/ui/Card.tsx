@@ -1,9 +1,16 @@
 import type { HTMLAttributes } from "react";
 
-export function Card({ className = "", ...props }: HTMLAttributes<HTMLDivElement>) {
+interface Props extends HTMLAttributes<HTMLDivElement> {
+  /** Set to false for edge-to-edge content such as cover images. */
+  padded?: boolean;
+}
+
+export function Card({ className = "", padded = true, ...props }: Props) {
   return (
     <div
-      className={`rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6 dark:border-slate-800 dark:bg-slate-900 ${className}`}
+      className={`rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900 ${
+        padded ? "p-4 sm:p-6" : ""
+      } ${className}`}
       {...props}
     />
   );

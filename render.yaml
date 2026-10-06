@@ -1,0 +1,45 @@
+# Render Blueprint: deploys the Express API (backend/) and a managed Postgres database.
+# In Render: New → Blueprint → select this repo. You'll be prompted for the secret values.
+
+services:
+  - type: web
+    name: student-career-platform-backend
+    runtime: node
+    rootDir: backend
+    plan: free
+    region: oregon
+    buildCommand: npm ci && npm run build && npm run db:push && npm run db:seed
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: student-career-platform-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      # Your Netlify URL, e.g. https://your-site.netlify.app (comma-separate multiple origins).
+      - key: CORS_ORIGIN
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      # Optional: Cloudflare R2 storage for resume/transcript/image uploads.
+      - key: R2_ACCOUNT_ID
+        sync: false
+      - key: R2_ACCESS_KEY_ID
+        sync: false
+      - key: R2_SECRET_ACCESS_KEY
+        sync: false
+      - key: R2_BUCKET_NAME
+        sync: false
+      - key: R2_PUBLIC_URL
+        sync: false
+
+databases:
+  - name: student-career-platform-db
+    plan: free
+    region: oregon
+    databaseName: career_platform
+    user: career_platform

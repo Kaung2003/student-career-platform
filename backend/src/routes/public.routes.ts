@@ -39,7 +39,16 @@ publicRouter.get("/:slug", async (req, res) => {
   const profile = await prisma.studentProfile.findUnique({
     where: { slug: req.params["slug"] },
     include: {
-      user: { select: { name: true } },
+      user: {
+        select: {
+          name: true,
+          certifications: {
+            where: { status: "COMPLETED" },
+            select: { id: true, name: true, provider: true, examDate: true },
+            orderBy: { examDate: "desc" },
+          },
+        },
+      },
       projects: { orderBy: { createdAt: "desc" } },
     },
   });
@@ -61,6 +70,8 @@ publicRouter.get("/:slug", async (req, res) => {
     github: profile.github,
     linkedin: profile.linkedin,
     website: profile.website,
+    resumeUrl: profile.resumeUrl,
+    certifications: profile.user.certifications,
     projects: profile.projects,
   });
 });

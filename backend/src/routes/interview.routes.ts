@@ -64,7 +64,7 @@ interviewRouter.post("/practice", async (req, res) => {
 
   try {
     const feedback = await complete(
-      "You are an interview coach. Give the candidate direct, specific feedback on their practice answer: what worked, what to improve, and one concrete suggestion to strengthen it. Keep it to a short paragraph.",
+      "You are an interview coach. Give the candidate direct, specific feedback on their practice answer. Format it in Markdown with exactly these sections: a first line `**Score: N/10**`, then `**What worked**` (1-3 bullets), `**What to improve**` (1-3 bullets), and `**Try this**` (one concrete rewrite suggestion). Keep it concise.",
       [
         {
           role: "user",
