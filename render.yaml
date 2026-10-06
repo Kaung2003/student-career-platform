@@ -25,6 +25,9 @@ services:
         sync: false
       - key: GEMINI_API_KEY
         sync: false
+      # Comma-separated emails that are promoted to admin when they log in.
+      - key: ADMIN_EMAILS
+        sync: false
       # Optional: Cloudflare R2 storage for resume/transcript/image uploads.
       - key: R2_ACCOUNT_ID
         sync: false

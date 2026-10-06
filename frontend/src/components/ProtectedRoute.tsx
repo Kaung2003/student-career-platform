@@ -30,6 +30,28 @@ export function ProtectedRoute() {
   );
 }
 
+/** Layout route for the admin panel: signed-in users with the ADMIN role only. */
+export function AdminRoute() {
+  const { user, loading } = useAuth();
+  const location = useLocation();
+
+  if (loading) return <FullPageSpinner />;
+
+  if (!user) {
+    return <Navigate to="/login" replace state={{ from: location.pathname }} />;
+  }
+
+  if (user.role !== "ADMIN") {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return (
+    <AppLayout variant="admin">
+      <Outlet />
+    </AppLayout>
+  );
+}
+
 /** Layout route for pages anyone can see: the app shell when signed in, the public header otherwise. */
 export function OptionalAuthRoute() {
   const { user, loading } = useAuth();

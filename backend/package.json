@@ -10,7 +10,8 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "postinstall": "prisma generate",
     "db:push": "prisma db push",
-    "db:seed": "tsx prisma/seed-interview-questions.ts"
+    "db:seed": "tsx prisma/seed-interview-questions.ts",
+    "make-admin": "tsx scripts/make-admin.ts"
   },
   "keywords": [],
   "author": "",

@@ -5,6 +5,7 @@ import { prisma } from "../lib/prisma.js";
 import { signAuthToken } from "../lib/jwt.js";
 import { slugify, uniqueSlugFrom } from "../lib/slugify.js";
 import { Role } from "../generated/prisma/enums.js";
+import { ensureBootstrapAdmin } from "../lib/admin.js";
 
 const SALT_ROUNDS = 10;
 
@@ -18,7 +19,7 @@ authRouter.post("/register", async (req, res) => {
     return;
   }
 
-  if (role !== undefined && !Object.values(Role).includes(role)) {
+  if (role !== undefined && (!Object.values(Role).includes(role) || role === Role.ADMIN)) {
     res.status(400).json({ error: `role must be one of: ${Object.values(Role).join(", ")}` });
     return;
   }
@@ -31,9 +32,10 @@ authRouter.post("/register", async (req, res) => {
 
   const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
 
-  const user = await prisma.user.create({
+  const created = await prisma.user.create({
     data: { name, email, password: hashedPassword, role },
   });
+  const user = await ensureBootstrapAdmin(created);
 
   const slug = await uniqueSlugFrom(slugify(name));
   await prisma.studentProfile.create({ data: { userId: user.id, slug } });
@@ -54,13 +56,20 @@ authRouter.post("/login", async (req, res) => {
     return;
   }
 
-  const user = await prisma.user.findUnique({ where: { email } });
-  const passwordMatches = user ? await bcrypt.compare(password, user.password) : false;
+  const found = await prisma.user.findUnique({ where: { email } });
+  const passwordMatches = found ? await bcrypt.compare(password, found.password) : false;
 
-  if (!user || !passwordMatches) {
+  if (!found || !passwordMatches) {
     res.status(401).json({ error: "Invalid email or password" });
     return;
   }
+
+  if (found.suspended) {
+    res.status(403).json({ error: "This account has been suspended. Contact support for help." });
+    return;
+  }
+
+  const user = await ensureBootstrapAdmin(found);
 
   const token = signAuthToken({ userId: user.id, role: user.role });
 
@@ -71,12 +80,14 @@ authRouter.post("/login", async (req, res) => {
 });
 
 authRouter.get("/me", requireAuth, async (req, res) => {
-  const user = await prisma.user.findUnique({ where: { id: req.auth!.userId } });
+  const found = await prisma.user.findUnique({ where: { id: req.auth!.userId } });
 
-  if (!user) {
+  if (!found) {
     res.status(404).json({ error: "User not found" });
     return;
   }
+
+  const user = await ensureBootstrapAdmin(found);
 
   res.json({ id: user.id, name: user.name, email: user.email, role: user.role });
 });

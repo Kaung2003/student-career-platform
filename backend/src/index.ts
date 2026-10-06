@@ -10,6 +10,7 @@ import { uploadRouter } from "./routes/upload.routes.js";
 import { certificationRouter } from "./routes/certification.routes.js";
 import { interviewRouter } from "./routes/interview.routes.js";
 import { feedbackRouter } from "./routes/feedback.routes.js";
+import { adminRouter } from "./routes/admin.routes.js";
 import { isAiConfigured } from "./lib/ai.js";
 import { isStorageConfigured } from "./lib/storage.js";
 
@@ -38,6 +39,7 @@ app.use("/api/uploads", uploadRouter);
 app.use("/api/certifications", certificationRouter);
 app.use("/api/interview", interviewRouter);
 app.use("/api/feedback", feedbackRouter);
+app.use("/api/admin", adminRouter);
 
 app.use((req, res) => {
   res.status(404).json({ error: `Not found: ${req.method} ${req.path}` });

@@ -8,7 +8,12 @@ import { Logo } from "./Logo";
 import { Avatar } from "./ui/Avatar";
 import { ChatWidget } from "./ChatWidget";
 import {
+  ArrowLeftIcon,
   AwardIcon,
+  HelpCircleIcon,
+  InboxIcon,
+  ShieldIcon,
+  UsersIcon,
   DashboardIcon,
   ExternalLinkIcon,
   FolderIcon,
@@ -34,7 +39,9 @@ interface NavItem {
   badge?: string;
 }
 
-const sections: { title: string; items: NavItem[] }[] = [
+type Section = { title: string; items: NavItem[] };
+
+const sections: Section[] = [
   {
     title: "Overview",
     items: [
@@ -63,10 +70,40 @@ const sections: { title: string; items: NavItem[] }[] = [
   },
 ];
 
-function SidebarContent({ slug, onNavigate }: { slug: string | null; onNavigate?: () => void }) {
+const adminSections: Section[] = [
+  {
+    title: "Admin",
+    items: [
+      { to: "/admin", label: "Overview", icon: DashboardIcon },
+      { to: "/admin/users", label: "Users", icon: UsersIcon },
+      { to: "/admin/feedback", label: "Feedback inbox", icon: InboxIcon },
+      { to: "/admin/questions", label: "Interview questions", icon: HelpCircleIcon },
+      { to: "/admin/comments", label: "Comments", icon: MessageSquareIcon },
+    ],
+  },
+];
+
+export type LayoutVariant = "app" | "admin";
+
+function SidebarContent({
+  slug,
+  variant,
+  onNavigate,
+}: {
+  slug: string | null;
+  variant: LayoutVariant;
+  onNavigate?: () => void;
+}) {
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
+
+  const navSections: Section[] =
+    variant === "admin"
+      ? adminSections
+      : user?.role === "ADMIN"
+        ? [...sections, { title: "Administration", items: [{ to: "/admin", label: "Admin panel", icon: ShieldIcon }] }]
+        : sections;
 
   function handleLogout() {
     onNavigate?.();
@@ -76,12 +113,17 @@ function SidebarContent({ slug, onNavigate }: { slug: string | null; onNavigate?
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex h-16 shrink-0 items-center px-5">
-        <Logo to="/dashboard" onClick={onNavigate} />
+      <div className="flex h-16 shrink-0 items-center gap-2 px-5">
+        <Logo to={variant === "admin" ? "/admin" : "/dashboard"} onClick={onNavigate} />
+        {variant === "admin" && (
+          <span className="rounded-md bg-slate-900 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white dark:bg-white dark:text-slate-900">
+            Admin
+          </span>
+        )}
       </div>
 
       <nav className="flex-1 space-y-6 overflow-y-auto px-3 py-4">
-        {sections.map((section) => (
+        {navSections.map((section) => (
           <div key={section.title}>
             <p className="px-3 pb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
               {section.title}
@@ -91,6 +133,7 @@ function SidebarContent({ slug, onNavigate }: { slug: string | null; onNavigate?
                 <NavLink
                   key={to}
                   to={to}
+                  end={to === "/admin"}
                   onClick={onNavigate}
                   className={({ isActive }) =>
                     `group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition ${
@@ -114,7 +157,19 @@ function SidebarContent({ slug, onNavigate }: { slug: string | null; onNavigate?
         ))}
       </nav>
 
-      {slug && (
+      {variant === "admin" && (
+        <div className="mx-3 mb-3">
+          <Link
+            to="/dashboard"
+            onClick={onNavigate}
+            className="flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-800"
+          >
+            <ArrowLeftIcon className="h-4 w-4" /> Back to student app
+          </Link>
+        </div>
+      )}
+
+      {variant === "app" && slug && (
         <div className="mx-3 mb-3 rounded-xl border border-slate-200 bg-gradient-to-br from-blue-50 to-indigo-50 p-4 dark:border-slate-800 dark:from-blue-500/10 dark:to-indigo-500/5">
           <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">Your public portfolio</p>
           <p className="mt-0.5 truncate text-xs text-slate-500 dark:text-slate-400">/p/{slug}</p>
@@ -158,13 +213,14 @@ function SidebarContent({ slug, onNavigate }: { slug: string | null; onNavigate?
   );
 }
 
-export function AppLayout({ children }: { children: ReactNode }) {
+export function AppLayout({ children, variant = "app" }: { children: ReactNode; variant?: LayoutVariant }) {
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [slug, setSlug] = useState<string | null>(null);
   const fullBleed = location.pathname === "/assistant";
 
   useEffect(() => {
+    if (variant === "admin") return;
     function load() {
       api
         .get<{ profile: StudentProfile | null }>("/profile/me")
@@ -174,7 +230,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
     load();
     window.addEventListener(PROFILE_UPDATED_EVENT, load);
     return () => window.removeEventListener(PROFILE_UPDATED_EVENT, load);
-  }, []);
+  }, [variant]);
 
   useEffect(() => {
     setMobileOpen(false);
@@ -183,7 +239,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 border-r border-slate-200 bg-white lg:block dark:border-slate-800 dark:bg-slate-900">
-        <SidebarContent slug={slug} />
+        <SidebarContent slug={slug} variant={variant} />
       </aside>
 
       {mobileOpen && (
@@ -197,7 +253,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
             >
               <XIcon className="h-5 w-5" />
             </button>
-            <SidebarContent slug={slug} onNavigate={() => setMobileOpen(false)} />
+            <SidebarContent slug={slug} variant={variant} onNavigate={() => setMobileOpen(false)} />
           </aside>
         </div>
       )}
@@ -211,10 +267,16 @@ export function AppLayout({ children }: { children: ReactNode }) {
           >
             <MenuIcon className="h-5 w-5" />
           </button>
-          <Logo to="/dashboard" />
+          <Logo to={variant === "admin" ? "/admin" : "/dashboard"} />
+          {variant === "admin" ? (
+            <span className="rounded-md bg-slate-900 px-1.5 py-0.5 text-[10px] font-bold uppercase text-white dark:bg-white dark:text-slate-900">
+              Admin
+            </span>
+          ) : (
           <Link to="/assistant" aria-label="AI Assistant" className="rounded-lg p-2 text-violet-600 hover:bg-violet-50 dark:text-violet-400 dark:hover:bg-violet-500/10">
             <SparklesIcon className="h-5 w-5" />
           </Link>
+          )}
         </header>
 
         {fullBleed ? (
@@ -224,7 +286,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
         )}
       </div>
 
-      {!fullBleed && <ChatWidget />}
+      {variant === "app" && !fullBleed && <ChatWidget />}
     </div>
   );
 }

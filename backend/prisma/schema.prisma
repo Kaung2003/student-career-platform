@@ -36,12 +36,19 @@ enum FeedbackType {
   COMMENT
 }
 
+enum FeedbackStatus {
+  NEW
+  IN_PROGRESS
+  RESOLVED
+}
+
 model User {
   id        String   @id @default(cuid())
   name      String
   email     String   @unique
   password  String
   role      Role     @default(STUDENT)
+  suspended Boolean  @default(false)
 
   profile           StudentProfile?
   certifications    Certification[]
@@ -98,6 +105,7 @@ model Feedback {
   id      String       @id @default(cuid())
   type    FeedbackType
   message String
+  status  FeedbackStatus @default(NEW)
 
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId String

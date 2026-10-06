@@ -227,3 +227,45 @@ export const RefreshIcon = (p: IconProps) => (
     <path d="M21 12a9 9 0 01-15.5 6.2L3 16M3 12a9 9 0 0115.5-6.2L21 8M21 3v5h-5M3 21v-5h5" />
   </Icon>
 );
+
+export const ShieldIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M12 3l8 3v6c0 4.5-3.4 8.3-8 9-4.6-.7-8-4.5-8-9V6l8-3z" />
+    <path d="M9 12l2 2 4-4" />
+  </Icon>
+);
+
+export const UsersIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <circle cx="9" cy="8" r="3.5" />
+    <path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6" />
+    <path d="M16 4.6a3.5 3.5 0 010 6.8M18 14.3c2.1.7 3.5 2.8 3.5 5.7" />
+  </Icon>
+);
+
+export const InboxIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M3 13l2.5-8h13L21 13v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6z" />
+    <path d="M3 13h5l1.5 3h5L16 13h5" />
+  </Icon>
+);
+
+export const HelpCircleIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M9.5 9.5a2.5 2.5 0 014.9.8c0 1.7-2.4 2.2-2.4 3.7M12 17h.01" />
+  </Icon>
+);
+
+export const ArrowLeftIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M19 12H5M11 18l-6-6 6-6" />
+  </Icon>
+);
+
+export const BanIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M5.6 5.6l12.8 12.8" />
+  </Icon>
+);

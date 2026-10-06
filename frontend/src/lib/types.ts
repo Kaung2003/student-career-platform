@@ -99,3 +99,64 @@ export interface ProfileComment {
   authorName: string;
   createdAt: string;
 }
+
+export type FeedbackStatus = "NEW" | "IN_PROGRESS" | "RESOLVED";
+
+export interface AdminStats {
+  totals: {
+    users: number;
+    newUsers: number;
+    admins: number;
+    suspended: number;
+    projects: number;
+    certifications: number;
+    attempts: number;
+    openFeedback: number;
+    comments: number;
+    questions: number;
+  };
+  signups: { date: string; count: number }[];
+  latestUsers: { id: string; name: string; email: string; role: Role; createdAt: string }[];
+  latestFeedback: AdminFeedback[];
+}
+
+export interface AdminUser {
+  id: string;
+  name: string;
+  email: string;
+  role: Role;
+  suspended: boolean;
+  createdAt: string;
+  slug: string | null;
+  school: string | null;
+  projects: number;
+  certifications: number;
+  attempts: number;
+  comments: number;
+}
+
+export interface AdminFeedback {
+  id: string;
+  type: FeedbackType;
+  status: FeedbackStatus;
+  message: string;
+  createdAt: string;
+  userName: string;
+  userEmail?: string;
+}
+
+export interface AdminQuestion extends InterviewQuestion {
+  createdAt: string;
+  attempts: number;
+}
+
+export interface AdminComment {
+  id: string;
+  body: string;
+  createdAt: string;
+  authorId: string;
+  authorName: string;
+  authorEmail: string;
+  profileSlug: string;
+  profileName: string;
+}

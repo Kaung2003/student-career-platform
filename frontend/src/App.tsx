@@ -3,7 +3,7 @@ import { AuthProvider } from "./context/AuthContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import { UiProvider } from "./context/UiContext";
 import { ChatProvider } from "./context/ChatContext";
-import { OptionalAuthRoute, ProtectedRoute } from "./components/ProtectedRoute";
+import { AdminRoute, OptionalAuthRoute, ProtectedRoute } from "./components/ProtectedRoute";
 import { Login } from "./pages/Login";
 import { Register } from "./pages/Register";
 import { Dashboard } from "./pages/Dashboard";
@@ -17,6 +17,11 @@ import { Directory } from "./pages/Directory";
 import { Landing } from "./pages/Landing";
 import { NotFound } from "./pages/NotFound";
 import { Assistant } from "./pages/Assistant";
+import { AdminOverview } from "./pages/admin/AdminOverview";
+import { AdminUsers } from "./pages/admin/AdminUsers";
+import { AdminFeedback } from "./pages/admin/AdminFeedback";
+import { AdminQuestions } from "./pages/admin/AdminQuestions";
+import { AdminComments } from "./pages/admin/AdminComments";
 
 function App() {
   return (
@@ -42,6 +47,14 @@ function App() {
                 <Route path="/certifications" element={<Certifications />} />
                 <Route path="/interview" element={<InterviewPractice />} />
                 <Route path="/feedback" element={<Feedback />} />
+              </Route>
+
+              <Route path="/admin" element={<AdminRoute />}>
+                <Route index element={<AdminOverview />} />
+                <Route path="users" element={<AdminUsers />} />
+                <Route path="feedback" element={<AdminFeedback />} />
+                <Route path="questions" element={<AdminQuestions />} />
+                <Route path="comments" element={<AdminComments />} />
               </Route>
 
               <Route path="*" element={<NotFound />} />
