@@ -1,5 +1,6 @@
 import { useEffect, useState, type SubmitEvent } from "react";
 import { useUi } from "../context/UiContext";
+import { useI18n } from "../i18n/I18nContext";
 import { api, ApiError } from "../lib/api";
 import type { Project } from "../lib/types";
 import { PageHeader } from "../components/PageHeader";
@@ -37,6 +38,7 @@ const TECH_SUGGESTIONS = ["React", "TypeScript", "Node.js", "Python", "PostgreSQ
 
 export function Projects() {
   const { toast, confirm } = useUi();
+  const { t } = useI18n();
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -97,9 +99,9 @@ export function Projects() {
       }
       await loadProjects();
       setModalOpen(false);
-      toast(editingId ? "Project updated" : "Project added");
+      toast(editingId ? t("projects.updated") : t("projects.added"));
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Failed to save project");
+      setError(err instanceof ApiError ? err.message : t("projects.saveFailed"));
     } finally {
       setSaving(false);
     }
@@ -107,18 +109,18 @@ export function Projects() {
 
   async function handleDelete(project: Project) {
     const ok = await confirm({
-      title: "Delete project?",
-      message: `“${project.title}” will be removed from your portfolio. This can't be undone.`,
-      confirmLabel: "Delete",
+      title: t("projects.deleteTitle"),
+      message: t("projects.deleteMessage", { title: project.title }),
+      confirmLabel: t("common.delete"),
       danger: true,
     });
     if (!ok) return;
     try {
       await api.delete(`/projects/${project.id}`);
       await loadProjects();
-      toast("Project deleted");
+      toast(t("projects.deleted"));
     } catch (err) {
-      toast(err instanceof ApiError ? err.message : "Failed to delete project", "error");
+      toast(err instanceof ApiError ? err.message : t("projects.deleteFailed"), "error");
     }
   }
 
@@ -135,11 +137,11 @@ export function Projects() {
   return (
     <div>
       <PageHeader
-        title="Projects"
-        description="Showcase the work that appears on your public portfolio."
+        title={t("projects.title")}
+        description={t("projects.description")}
         actions={
           <Button onClick={openNew}>
-            <PlusIcon className="h-4 w-4" /> New project
+            <PlusIcon className="h-4 w-4" /> {t("projects.new")}
           </Button>
         }
       />
@@ -149,7 +151,7 @@ export function Projects() {
           <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
           <input
             type="search"
-            placeholder="Search projects or tech..."
+            placeholder={t("projects.searchPlaceholder")}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             className={`${inputClass} pl-9`}
@@ -166,16 +168,16 @@ export function Projects() {
       ) : projects.length === 0 ? (
         <EmptyState
           icon={<FolderIcon className="h-6 w-6" />}
-          title="No projects yet"
-          description="Projects are the heart of your portfolio. Add class projects, hackathon builds, or side projects."
+          title={t("projects.emptyTitle")}
+          description={t("projects.emptyDescription")}
           action={
             <Button onClick={openNew}>
-              <PlusIcon className="h-4 w-4" /> Add your first project
+              <PlusIcon className="h-4 w-4" /> {t("projects.addFirst")}
             </Button>
           }
         />
       ) : filtered.length === 0 ? (
-        <EmptyState title="No matching projects" description="Try a different search term." />
+        <EmptyState title={t("projects.noMatchTitle")} description={t("projects.noMatchDescription")} />
       ) : (
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((project) => (
@@ -191,14 +193,14 @@ export function Projects() {
                 <div className="absolute right-2 top-2 flex gap-1 opacity-100 transition sm:opacity-0 sm:group-hover:opacity-100">
                   <button
                     onClick={() => openEdit(project)}
-                    aria-label="Edit project"
+                    aria-label={t("projects.edit")}
                     className="rounded-lg bg-white/90 p-2 text-slate-700 shadow-sm backdrop-blur hover:bg-white dark:bg-slate-900/90 dark:text-slate-200"
                   >
                     <PencilIcon className="h-4 w-4" />
                   </button>
                   <button
                     onClick={() => void handleDelete(project)}
-                    aria-label="Delete project"
+                    aria-label={t("projects.delete")}
                     className="rounded-lg bg-white/90 p-2 text-red-600 shadow-sm backdrop-blur hover:bg-white dark:bg-slate-900/90 dark:text-red-400"
                   >
                     <TrashIcon className="h-4 w-4" />
@@ -227,7 +229,7 @@ export function Projects() {
                       rel="noreferrer"
                       className="inline-flex items-center gap-1.5 font-medium text-blue-600 hover:underline dark:text-blue-400"
                     >
-                      <ExternalLinkIcon className="h-4 w-4" /> Live demo
+                      <ExternalLinkIcon className="h-4 w-4" /> {t("projects.liveDemo")}
                     </a>
                   )}
                   {project.githubUrl && (
@@ -237,7 +239,7 @@ export function Projects() {
                       rel="noreferrer"
                       className="inline-flex items-center gap-1.5 font-medium text-slate-600 hover:underline dark:text-slate-400"
                     >
-                      <GithubIcon className="h-4 w-4" /> Code
+                      <GithubIcon className="h-4 w-4" /> {t("projects.code")}
                     </a>
                   )}
                 </div>
@@ -250,27 +252,27 @@ export function Projects() {
       <Modal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
-        title={editingId ? "Edit project" : "New project"}
-        description="Describe what you built, how, and why it matters."
+        title={editingId ? t("projects.edit") : t("projects.new")}
+        description={t("projects.modalDescription")}
         size="lg"
         footer={
           <>
             <Button variant="secondary" onClick={() => setModalOpen(false)}>
-              Cancel
+              {t("common.cancel")}
             </Button>
             <Button type="submit" form="project-form" disabled={saving || !form.title.trim()}>
-              {saving ? "Saving..." : editingId ? "Save changes" : "Add project"}
+              {saving ? t("common.saving") : editingId ? t("common.saveChanges") : t("projects.add")}
             </Button>
           </>
         }
       >
         <form id="project-form" onSubmit={handleSubmit} className="space-y-4">
-          <Field label="Title">
+          <Field label={t("projects.fieldTitle")}>
             <input
               type="text"
               required
               autoFocus
-              placeholder="e.g. Campus Events App"
+              placeholder={t("projects.titlePlaceholder")}
               value={form.title}
               onChange={(e) => setForm({ ...form, title: e.target.value })}
               className={inputClass}
@@ -278,7 +280,7 @@ export function Projects() {
           </Field>
 
           <Field
-            label="Description"
+            label={t("projects.fieldDescription")}
             action={
               <AiImproveButton
                 kind="project"
@@ -292,24 +294,24 @@ export function Projects() {
           >
             <textarea
               rows={4}
-              placeholder="What does it do? What was your role? What did you learn or achieve?"
+              placeholder={t("projects.descriptionPlaceholder")}
               value={form.description}
               onChange={(e) => setForm({ ...form, description: e.target.value })}
               className={inputClass}
             />
           </Field>
 
-          <Field label="Tech stack">
+          <Field label={t("projects.techStack")}>
             <TagInput
               value={form.techStack}
               onChange={(techStack) => setForm({ ...form, techStack })}
-              placeholder="Type a technology and press Enter"
+              placeholder={t("projects.techPlaceholder")}
               suggestions={TECH_SUGGESTIONS}
             />
           </Field>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Field label="Live URL">
+            <Field label={t("projects.liveUrl")}>
               <input
                 type="text"
                 inputMode="url"
@@ -319,7 +321,7 @@ export function Projects() {
                 className={inputClass}
               />
             </Field>
-            <Field label="GitHub URL">
+            <Field label={t("projects.githubUrl")}>
               <input
                 type="text"
                 inputMode="url"
@@ -331,12 +333,12 @@ export function Projects() {
             </Field>
           </div>
 
-          <Field label="Cover image">
+          <Field label={t("projects.coverImage")}>
             <FileUploadField
               value={form.imageUrl}
               onChange={(url) => setForm((f) => ({ ...f, imageUrl: url }))}
               uploadType="project-image"
-              placeholder="Paste an image URL or upload"
+              placeholder={t("projects.coverPlaceholder")}
               accept="image/*"
             />
           </Field>

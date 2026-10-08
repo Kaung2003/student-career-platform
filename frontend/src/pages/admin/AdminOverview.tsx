@@ -7,27 +7,29 @@ import { Card } from "../../components/ui/Card";
 import { Badge } from "../../components/ui/Badge";
 import { Avatar } from "../../components/ui/Avatar";
 import { Skeleton } from "../../components/ui/Skeleton";
-import { FEEDBACK_STATUS, FEEDBACK_TYPE } from "./adminLabels";
+import { FEEDBACK_STATUS_TONE, FEEDBACK_TYPE_TONE } from "./adminLabels";
+import { useI18n } from "../../i18n/I18nContext";
 
 function SignupChart({ data }: { data: AdminStats["signups"] }) {
+  const { t, locale } = useI18n();
   const [hover, setHover] = useState<number | null>(null);
   const [showTable, setShowTable] = useState(false);
   const max = Math.max(1, ...data.map((d) => d.count));
   const total = data.reduce((sum, d) => sum + d.count, 0);
-  const label = (date: string) => new Date(`${date}T00:00:00`).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  const label = (date: string) => new Date(`${date}T00:00:00`).toLocaleDateString(locale, { month: "short", day: "numeric" });
 
   return (
     <Card>
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="font-semibold text-slate-900 dark:text-white">New sign-ups</h2>
-          <p className="text-sm text-slate-500 dark:text-slate-400">Last 14 days · {total} total</p>
+          <h2 className="font-semibold text-slate-900 dark:text-white">{t("admin.overview.signups")}</h2>
+          <p className="text-sm text-slate-500 dark:text-slate-400">{t("admin.overview.last14", { count: total })}</p>
         </div>
         <button
           onClick={() => setShowTable((s) => !s)}
           className="text-xs font-medium text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
         >
-          {showTable ? "Show chart" : "Show table"}
+          {showTable ? t("admin.overview.showChart") : t("admin.overview.showTable")}
         </button>
       </div>
 
@@ -35,8 +37,8 @@ function SignupChart({ data }: { data: AdminStats["signups"] }) {
         <table className="mt-4 w-full text-sm">
           <thead>
             <tr className="text-left text-xs text-slate-500 dark:text-slate-400">
-              <th className="py-1.5 font-medium">Date</th>
-              <th className="py-1.5 text-right font-medium">Sign-ups</th>
+              <th className="py-1.5 font-medium">{t("admin.overview.date")}</th>
+              <th className="py-1.5 text-right font-medium">{t("admin.overview.signupsColumn")}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -67,7 +69,7 @@ function SignupChart({ data }: { data: AdminStats["signups"] }) {
                 key={d.date}
                 className="group relative flex h-full flex-1 cursor-default items-end justify-center"
                 onMouseEnter={() => setHover(i)}
-                aria-label={`${label(d.date)}: ${d.count} sign-ups`}
+                aria-label={t("admin.overview.onDate", { count: d.count, date: label(d.date) })}
               >
                 <div
                   className={`w-full max-w-7 rounded-t-[4px] transition-colors ${
@@ -77,7 +79,7 @@ function SignupChart({ data }: { data: AdminStats["signups"] }) {
                 />
                 {hover === i && (
                   <div className="pointer-events-none absolute bottom-full z-10 mb-2 whitespace-nowrap rounded-lg bg-slate-900 px-2.5 py-1.5 text-xs text-white shadow-lg dark:bg-white dark:text-slate-900">
-                    <span className="font-semibold tabular-nums">{d.count}</span> on {label(d.date)}
+                    {t("admin.overview.onDate", { count: d.count, date: label(d.date) })}
                   </div>
                 )}
               </div>
@@ -86,7 +88,7 @@ function SignupChart({ data }: { data: AdminStats["signups"] }) {
           <div className="ml-7 mt-2 flex justify-between border-t border-slate-200 pt-2 text-[11px] text-slate-400 dark:border-slate-800 dark:text-slate-500">
             <span>{data[0] && label(data[0].date)}</span>
             <span>{data[Math.floor(data.length / 2)] && label(data[Math.floor(data.length / 2)]!.date)}</span>
-            <span>Today</span>
+            <span>{t("common.today")}</span>
           </div>
         </div>
       )}
@@ -95,6 +97,7 @@ function SignupChart({ data }: { data: AdminStats["signups"] }) {
 }
 
 export function AdminOverview() {
+  const { t, formatDate } = useI18n();
   const [stats, setStats] = useState<AdminStats | null>(null);
 
   useEffect(() => {
@@ -115,17 +118,17 @@ export function AdminOverview() {
     );
   }
 
-  const t = stats.totals;
+  const totals = stats.totals;
   const tiles = [
-    { label: "Total users", value: t.users, sub: `+${t.newUsers} this week`, to: "/admin/users" },
-    { label: "Open feedback", value: t.openFeedback, sub: "New or in progress", to: "/admin/feedback" },
-    { label: "Practice answers", value: t.attempts, sub: `${t.questions} questions in bank`, to: "/admin/questions" },
-    { label: "Projects", value: t.projects, sub: `${t.certifications} certifications tracked`, to: "/admin/users" },
+    { label: t("admin.overview.totalUsers"), value: totals.users, sub: t("admin.overview.thisWeek", { count: totals.newUsers }), to: "/admin/users" },
+    { label: t("admin.overview.openFeedback"), value: totals.openFeedback, sub: t("admin.overview.openFeedbackSub"), to: "/admin/feedback" },
+    { label: t("admin.overview.practiceAnswers"), value: totals.attempts, sub: t("admin.overview.questionsInBank", { count: totals.questions }), to: "/admin/questions" },
+    { label: t("admin.overview.projects"), value: totals.projects, sub: t("admin.overview.certsTracked", { count: totals.certifications }), to: "/admin/users" },
   ];
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Admin overview" description="Platform health, growth, and items that need your attention." />
+      <PageHeader title={t("admin.overview.title")} description={t("admin.overview.description")} />
 
       <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         {tiles.map((tile) => (
@@ -146,13 +149,13 @@ export function AdminOverview() {
           <SignupChart data={stats.signups} />
         </div>
         <Card>
-          <h2 className="font-semibold text-slate-900 dark:text-white">Accounts</h2>
+          <h2 className="font-semibold text-slate-900 dark:text-white">{t("admin.overview.accounts")}</h2>
           <dl className="mt-4 space-y-3 text-sm">
             {[
-              ["Admins", t.admins],
-              ["Suspended", t.suspended],
-              ["Portfolio comments", t.comments],
-              ["Interview questions", t.questions],
+              [t("admin.overview.admins"), totals.admins],
+              [t("admin.overview.suspended"), totals.suspended],
+              [t("admin.overview.portfolioComments"), totals.comments],
+              [t("admin.overview.interviewQuestions"), totals.questions],
             ].map(([k, v]) => (
               <div key={k} className="flex items-center justify-between">
                 <dt className="text-slate-500 dark:text-slate-400">{k}</dt>
@@ -166,9 +169,9 @@ export function AdminOverview() {
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <div className="flex items-center justify-between">
-            <h2 className="font-semibold text-slate-900 dark:text-white">Newest members</h2>
+            <h2 className="font-semibold text-slate-900 dark:text-white">{t("admin.overview.newest")}</h2>
             <Link to="/admin/users" className="text-xs font-medium text-blue-600 hover:underline dark:text-blue-400">
-              All users
+              {t("admin.overview.allUsers")}
             </Link>
           </div>
           <ul className="mt-4 divide-y divide-slate-100 dark:divide-slate-800">
@@ -179,8 +182,8 @@ export function AdminOverview() {
                   <p className="truncate text-sm font-medium text-slate-900 dark:text-slate-100">{u.name}</p>
                   <p className="truncate text-xs text-slate-500 dark:text-slate-400">{u.email}</p>
                 </div>
-                {u.role === "ADMIN" && <Badge tone="violet">Admin</Badge>}
-                <span className="text-xs text-slate-400">{new Date(u.createdAt).toLocaleDateString()}</span>
+                {u.role === "ADMIN" && <Badge tone="violet">{t("admin.role.ADMIN")}</Badge>}
+                <span className="text-xs text-slate-400">{formatDate(u.createdAt)}</span>
               </li>
             ))}
           </ul>
@@ -188,20 +191,20 @@ export function AdminOverview() {
 
         <Card>
           <div className="flex items-center justify-between">
-            <h2 className="font-semibold text-slate-900 dark:text-white">Needs attention</h2>
+            <h2 className="font-semibold text-slate-900 dark:text-white">{t("admin.overview.attention")}</h2>
             <Link to="/admin/feedback" className="text-xs font-medium text-blue-600 hover:underline dark:text-blue-400">
-              Open inbox
+              {t("admin.overview.openInbox")}
             </Link>
           </div>
           {stats.latestFeedback.length === 0 ? (
-            <p className="mt-6 text-center text-sm text-slate-500 dark:text-slate-400">Inbox zero — no open feedback. 🎉</p>
+            <p className="mt-6 text-center text-sm text-slate-500 dark:text-slate-400">{t("admin.overview.inboxZero")}</p>
           ) : (
             <ul className="mt-4 space-y-3">
               {stats.latestFeedback.map((f) => (
                 <li key={f.id} className="rounded-lg border border-slate-100 p-3 dark:border-slate-800">
                   <div className="flex items-center gap-2">
-                    <Badge tone={FEEDBACK_TYPE[f.type].tone}>{FEEDBACK_TYPE[f.type].label}</Badge>
-                    <Badge tone={FEEDBACK_STATUS[f.status].tone}>{FEEDBACK_STATUS[f.status].label}</Badge>
+                    <Badge tone={FEEDBACK_TYPE_TONE[f.type]}>{t(`admin.feedbackType.${f.type}`)}</Badge>
+                    <Badge tone={FEEDBACK_STATUS_TONE[f.status]}>{t(`admin.feedbackStatus.${f.status}`)}</Badge>
                     <span className="ml-auto text-xs text-slate-400">{f.userName}</span>
                   </div>
                   <p className="mt-2 line-clamp-2 text-sm text-slate-700 dark:text-slate-300">{f.message}</p>

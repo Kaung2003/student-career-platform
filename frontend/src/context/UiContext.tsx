@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useRef, useState, type ReactNod
 import { Modal } from "../components/ui/Modal";
 import { Button } from "../components/ui/Button";
 import { CheckIcon, XIcon } from "../components/icons";
+import { useI18n } from "../i18n/I18nContext";
 
 type ToastTone = "success" | "error" | "info";
 
@@ -32,6 +33,7 @@ const toneClass: Record<ToastTone, string> = {
 };
 
 export function UiProvider({ children }: { children: ReactNode }) {
+  const { t } = useI18n();
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [confirmState, setConfirmState] = useState<ConfirmOptions | null>(null);
   const resolver = useRef<((value: boolean) => void) | null>(null);
@@ -83,15 +85,15 @@ export function UiProvider({ children }: { children: ReactNode }) {
         footer={
           <>
             <Button variant="secondary" onClick={() => settle(false)}>
-              Cancel
+              {t("common.cancel")}
             </Button>
             <Button variant={confirmState?.danger ? "danger" : "primary"} onClick={() => settle(true)}>
-              {confirmState?.confirmLabel ?? "Confirm"}
+              {confirmState?.confirmLabel ?? t("common.confirm")}
             </Button>
           </>
         }
       >
-        <p className="text-sm text-slate-600 dark:text-slate-400">{confirmState?.message ?? "Are you sure?"}</p>
+        <p className="text-sm text-slate-600 dark:text-slate-400">{confirmState?.message ?? t("common.areYouSure")}</p>
       </Modal>
     </UiContext.Provider>
   );

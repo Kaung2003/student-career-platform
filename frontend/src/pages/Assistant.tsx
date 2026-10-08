@@ -1,23 +1,25 @@
 import { useState } from "react";
 import { useChat } from "../context/ChatContext";
 import { useUi } from "../context/UiContext";
+import { useI18n, type Translate } from "../i18n/I18nContext";
 import { ChatComposer, ChatThread } from "../components/chat/ChatThread";
 import { ClockIcon, MessageSquareIcon, PlusIcon, SparklesIcon, TrashIcon, XIcon } from "../components/icons";
 
-function relativeTime(timestamp: number) {
+function relativeTime(timestamp: number, t: Translate) {
   const diff = Date.now() - timestamp;
   const minutes = Math.round(diff / 60000);
-  if (minutes < 1) return "Just now";
-  if (minutes < 60) return `${minutes}m ago`;
+  if (minutes < 1) return t("assistant.justNow");
+  if (minutes < 60) return t("assistant.minutesAgo", { n: minutes });
   const hours = Math.round(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
+  if (hours < 24) return t("assistant.hoursAgo", { n: hours });
   const days = Math.round(hours / 24);
-  return days === 1 ? "Yesterday" : `${days}d ago`;
+  return days === 1 ? t("assistant.yesterday") : t("assistant.daysAgo", { n: days });
 }
 
 function History({ onPick }: { onPick?: () => void }) {
   const { conversations, active, selectChat, deleteChat, newChat } = useChat();
   const { confirm } = useUi();
+  const { t } = useI18n();
 
   return (
     <div className="flex h-full flex-col">
@@ -29,15 +31,15 @@ function History({ onPick }: { onPick?: () => void }) {
           }}
           className="flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white transition hover:bg-blue-700"
         >
-          <PlusIcon className="h-4 w-4" /> New chat
+          <PlusIcon className="h-4 w-4" /> {t("chat.newChat")}
         </button>
       </div>
       <p className="px-4 pb-2 pt-1 text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-        Recent
+        {t("assistant.recent")}
       </p>
       <div className="flex-1 space-y-0.5 overflow-y-auto px-2 pb-3">
         {conversations.length === 0 && (
-          <p className="px-3 py-6 text-center text-xs text-slate-400 dark:text-slate-500">Your conversations will appear here.</p>
+          <p className="px-3 py-6 text-center text-xs text-slate-400 dark:text-slate-500">{t("assistant.empty")}</p>
         )}
         {conversations.map((c) => (
           <div
@@ -53,22 +55,22 @@ function History({ onPick }: { onPick?: () => void }) {
               }}
               className="min-w-0 flex-1 text-left"
             >
-              <p className="truncate text-sm text-slate-800 dark:text-slate-200">{c.title || "New chat"}</p>
+              <p className="truncate text-sm text-slate-800 dark:text-slate-200">{c.title || t("chat.newChat")}</p>
               <p className="mt-0.5 flex items-center gap-1 text-[11px] text-slate-400 dark:text-slate-500">
-                <ClockIcon className="h-3 w-3" /> {relativeTime(c.updatedAt)}
+                <ClockIcon className="h-3 w-3" /> {relativeTime(c.updatedAt, t)}
               </p>
             </button>
             <button
               onClick={async () => {
                 const ok = await confirm({
-                  title: "Delete conversation?",
-                  message: "This conversation will be permanently removed from this device.",
-                  confirmLabel: "Delete",
+                  title: t("assistant.deleteTitle"),
+                  message: t("assistant.deleteMessage"),
+                  confirmLabel: t("common.delete"),
                   danger: true,
                 });
                 if (ok) deleteChat(c.id);
               }}
-              aria-label="Delete conversation"
+              aria-label={t("assistant.deleteConversation")}
               className="rounded p-1 text-slate-400 opacity-0 transition hover:text-red-600 group-hover:opacity-100 dark:hover:text-red-400"
             >
               <TrashIcon className="h-3.5 w-3.5" />
@@ -82,6 +84,7 @@ function History({ onPick }: { onPick?: () => void }) {
 
 export function Assistant() {
   const { active, conversations } = useChat();
+  const { t } = useI18n();
   const [historyOpen, setHistoryOpen] = useState(false);
 
   return (
@@ -95,8 +98,8 @@ export function Assistant() {
           <div className="animate-fade-in absolute inset-0 bg-slate-950/50" onClick={() => setHistoryOpen(false)} />
           <aside className="animate-pop-in absolute inset-y-0 right-0 w-72 max-w-[85vw] bg-white shadow-xl dark:bg-slate-900">
             <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3 dark:border-slate-800">
-              <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">Conversations</p>
-              <button onClick={() => setHistoryOpen(false)} aria-label="Close" className="rounded p-1 text-slate-500">
+              <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">{t("assistant.conversations")}</p>
+              <button onClick={() => setHistoryOpen(false)} aria-label={t("common.close")} className="rounded p-1 text-slate-500">
                 <XIcon className="h-5 w-5" />
               </button>
             </div>
@@ -112,14 +115,14 @@ export function Assistant() {
               <SparklesIcon className="h-4 w-4" />
             </div>
             <p className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">
-              {active?.title ?? "AI Career Assistant"}
+              {active?.title ?? t("assistant.title")}
             </p>
           </div>
           <button
             onClick={() => setHistoryOpen(true)}
             className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100 xl:hidden dark:text-slate-400 dark:hover:bg-slate-800"
           >
-            <MessageSquareIcon className="h-4 w-4" /> History ({conversations.length})
+            <MessageSquareIcon className="h-4 w-4" /> {t("assistant.history", { count: conversations.length })}
           </button>
         </div>
 

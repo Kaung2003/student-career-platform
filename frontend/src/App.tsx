@@ -1,6 +1,7 @@
 import { Route, Routes } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import { ThemeProvider } from "./context/ThemeContext";
+import { I18nProvider } from "./i18n/I18nContext";
 import { UiProvider } from "./context/UiContext";
 import { ChatProvider } from "./context/ChatContext";
 import { AdminRoute, OptionalAuthRoute, ProtectedRoute } from "./components/ProtectedRoute";
@@ -26,42 +27,44 @@ import { AdminComments } from "./pages/admin/AdminComments";
 function App() {
   return (
     <ThemeProvider>
-      <UiProvider>
-        <AuthProvider>
-          <ChatProvider>
-            <Routes>
-              <Route path="/" element={<Landing />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
-              <Route path="/p/:slug" element={<PublicPortfolio />} />
+      <I18nProvider>
+        <UiProvider>
+          <AuthProvider>
+            <ChatProvider>
+              <Routes>
+                <Route path="/" element={<Landing />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
+                <Route path="/p/:slug" element={<PublicPortfolio />} />
 
-              <Route element={<OptionalAuthRoute />}>
-                <Route path="/directory" element={<Directory />} />
-              </Route>
+                <Route element={<OptionalAuthRoute />}>
+                  <Route path="/directory" element={<Directory />} />
+                </Route>
 
-              <Route element={<ProtectedRoute />}>
-                <Route path="/dashboard" element={<Dashboard />} />
-                <Route path="/assistant" element={<Assistant />} />
-                <Route path="/profile" element={<Profile />} />
-                <Route path="/projects" element={<Projects />} />
-                <Route path="/certifications" element={<Certifications />} />
-                <Route path="/interview" element={<InterviewPractice />} />
-                <Route path="/feedback" element={<Feedback />} />
-              </Route>
+                <Route element={<ProtectedRoute />}>
+                  <Route path="/dashboard" element={<Dashboard />} />
+                  <Route path="/assistant" element={<Assistant />} />
+                  <Route path="/profile" element={<Profile />} />
+                  <Route path="/projects" element={<Projects />} />
+                  <Route path="/certifications" element={<Certifications />} />
+                  <Route path="/interview" element={<InterviewPractice />} />
+                  <Route path="/feedback" element={<Feedback />} />
+                </Route>
 
-              <Route path="/admin" element={<AdminRoute />}>
-                <Route index element={<AdminOverview />} />
-                <Route path="users" element={<AdminUsers />} />
-                <Route path="feedback" element={<AdminFeedback />} />
-                <Route path="questions" element={<AdminQuestions />} />
-                <Route path="comments" element={<AdminComments />} />
-              </Route>
+                <Route path="/admin" element={<AdminRoute />}>
+                  <Route index element={<AdminOverview />} />
+                  <Route path="users" element={<AdminUsers />} />
+                  <Route path="feedback" element={<AdminFeedback />} />
+                  <Route path="questions" element={<AdminQuestions />} />
+                  <Route path="comments" element={<AdminComments />} />
+                </Route>
 
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </ChatProvider>
-        </AuthProvider>
-      </UiProvider>
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </ChatProvider>
+          </AuthProvider>
+        </UiProvider>
+      </I18nProvider>
     </ThemeProvider>
   );
 }

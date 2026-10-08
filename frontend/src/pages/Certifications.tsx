@@ -1,5 +1,6 @@
 import { useEffect, useState, type SubmitEvent } from "react";
 import { useUi } from "../context/UiContext";
+import { useI18n, type Translate } from "../i18n/I18nContext";
 import { api, ApiError } from "../lib/api";
 import type { CertStatus, Certification } from "../lib/types";
 import { PageHeader } from "../components/PageHeader";
@@ -12,10 +13,10 @@ import { Modal } from "../components/ui/Modal";
 import { Skeleton } from "../components/ui/Skeleton";
 import { AwardIcon, CalendarIcon, ExternalLinkIcon, PencilIcon, PlusIcon, TrashIcon } from "../components/icons";
 
-const STATUS: Record<CertStatus, { label: string; tone: BadgeTone; bar: string }> = {
-  PLANNING: { label: "Planning", tone: "slate", bar: "bg-slate-300 dark:bg-slate-600" },
-  IN_PROGRESS: { label: "In progress", tone: "amber", bar: "bg-amber-500" },
-  COMPLETED: { label: "Completed", tone: "green", bar: "bg-emerald-500" },
+const STATUS: Record<CertStatus, { tone: BadgeTone; bar: string }> = {
+  PLANNING: { tone: "slate", bar: "bg-slate-300 dark:bg-slate-600" },
+  IN_PROGRESS: { tone: "amber", bar: "bg-amber-500" },
+  COMPLETED: { tone: "green", bar: "bg-emerald-500" },
 };
 
 const STATUSES = Object.keys(STATUS) as CertStatus[];
@@ -29,17 +30,20 @@ const emptyForm = {
   resourceUrl: "",
 };
 
-function examLabel(date: string, status: CertStatus) {
+function examLabel(date: string, status: CertStatus, t: Translate, locale: string) {
   const days = Math.round((new Date(date).setHours(0, 0, 0, 0) - new Date().setHours(0, 0, 0, 0)) / 86400000);
-  const formatted = new Date(date).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
-  if (status === "COMPLETED") return { text: `Passed ${formatted}`, urgent: false };
-  if (days < 0) return { text: `${formatted} · ${Math.abs(days)}d ago`, urgent: false };
-  if (days === 0) return { text: `${formatted} · Today!`, urgent: true };
-  return { text: `${formatted} · in ${days} day${days === 1 ? "" : "s"}`, urgent: days <= 7 };
+  const formatted = new Date(date).toLocaleDateString(locale, { month: "short", day: "numeric", year: "numeric" });
+  if (status === "COMPLETED") return { text: t("certs.examPassed", { date: formatted }), urgent: false };
+  if (days < 0) return { text: t("certs.examPast", { date: formatted, days: Math.abs(days) }), urgent: false };
+  if (days === 0) return { text: t("certs.examToday", { date: formatted }), urgent: true };
+  if (days === 1) return { text: t("certs.examTomorrow", { date: formatted }), urgent: true };
+  return { text: t("certs.examIn", { date: formatted, days }), urgent: days <= 7 };
 }
 
 export function Certifications() {
   const { toast, confirm } = useUi();
+  const { t, locale } = useI18n();
+  const statusLabel = (s: CertStatus) => t(`certs.status.${s}`);
   const [certifications, setCertifications] = useState<Certification[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -100,9 +104,9 @@ export function Certifications() {
       }
       await load();
       setModalOpen(false);
-      toast(editingId ? "Certification updated" : "Certification added");
+      toast(editingId ? t("certs.updated") : t("certs.added"));
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Failed to save certification");
+      setError(err instanceof ApiError ? err.message : t("certs.saveFailed"));
     } finally {
       setSaving(false);
     }
@@ -119,26 +123,26 @@ export function Certifications() {
         resourceUrl: cert.resourceUrl,
       });
       await load();
-      toast(status === "COMPLETED" ? `Congrats on ${cert.name}! 🎉` : "Status updated");
+      toast(status === "COMPLETED" ? t("certs.congrats", { name: cert.name }) : t("certs.statusUpdated"));
     } catch (err) {
-      toast(err instanceof ApiError ? err.message : "Failed to update status", "error");
+      toast(err instanceof ApiError ? err.message : t("certs.updateFailed"), "error");
     }
   }
 
   async function handleDelete(cert: Certification) {
     const ok = await confirm({
-      title: "Delete certification?",
-      message: `“${cert.name}” will be removed. This can't be undone.`,
-      confirmLabel: "Delete",
+      title: t("certs.deleteTitle"),
+      message: t("certs.deleteMessage", { name: cert.name }),
+      confirmLabel: t("common.delete"),
       danger: true,
     });
     if (!ok) return;
     try {
       await api.delete(`/certifications/${cert.id}`);
       await load();
-      toast("Certification deleted");
+      toast(t("certs.deleted"));
     } catch (err) {
-      toast(err instanceof ApiError ? err.message : "Failed to delete", "error");
+      toast(err instanceof ApiError ? err.message : t("certs.deleteFailed"), "error");
     }
   }
 
@@ -151,11 +155,11 @@ export function Certifications() {
   return (
     <div>
       <PageHeader
-        title="Certifications"
-        description="Plan, study for, and celebrate the certifications that boost your career."
+        title={t("certs.title")}
+        description={t("certs.description")}
         actions={
           <Button onClick={openNew}>
-            <PlusIcon className="h-4 w-4" /> Add certification
+            <PlusIcon className="h-4 w-4" /> {t("certs.add")}
           </Button>
         }
       />
@@ -164,7 +168,7 @@ export function Certifications() {
         {STATUSES.map((s) => (
           <Card key={s} className="relative overflow-hidden">
             <div className={`absolute inset-x-0 top-0 h-1 ${STATUS[s].bar}`} />
-            <p className="text-xs font-medium text-slate-500 sm:text-sm dark:text-slate-400">{STATUS[s].label}</p>
+            <p className="text-xs font-medium text-slate-500 sm:text-sm dark:text-slate-400">{statusLabel(s)}</p>
             <p className="mt-1 text-2xl font-semibold text-slate-900 sm:text-3xl dark:text-white">{counts[s]}</p>
           </Card>
         ))}
@@ -182,7 +186,7 @@ export function Certifications() {
                   : "text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
               }`}
             >
-              {s === "ALL" ? `All (${certifications.length})` : STATUS[s].label}
+              {s === "ALL" ? t("certs.all", { count: certifications.length }) : statusLabel(s)}
             </button>
           ))}
         </div>
@@ -197,20 +201,20 @@ export function Certifications() {
       ) : certifications.length === 0 ? (
         <EmptyState
           icon={<AwardIcon className="h-6 w-6" />}
-          title="No certifications yet"
-          description="Track an exam you're planning, studying for, or already passed — like AWS Cloud Practitioner or Google Data Analytics."
+          title={t("certs.emptyTitle")}
+          description={t("certs.emptyDescription")}
           action={
             <Button onClick={openNew}>
-              <PlusIcon className="h-4 w-4" /> Add certification
+              <PlusIcon className="h-4 w-4" /> {t("certs.add")}
             </Button>
           }
         />
       ) : visible.length === 0 ? (
-        <EmptyState title={`No ${filter === "ALL" ? "" : STATUS[filter].label.toLowerCase()} certifications`} />
+        <EmptyState title={t("certs.noneInView")} />
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
           {visible.map((cert) => {
-            const exam = cert.examDate ? examLabel(cert.examDate, cert.status) : null;
+            const exam = cert.examDate ? examLabel(cert.examDate, cert.status, t, locale) : null;
             return (
               <Card key={cert.id} className="flex flex-col">
                 <div className="flex items-start gap-4">
@@ -230,14 +234,14 @@ export function Certifications() {
                   <div className="flex shrink-0 gap-1">
                     <button
                       onClick={() => openEdit(cert)}
-                      aria-label="Edit"
+                      aria-label={t("certs.edit")}
                       className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200"
                     >
                       <PencilIcon className="h-4 w-4" />
                     </button>
                     <button
                       onClick={() => void handleDelete(cert)}
-                      aria-label="Delete"
+                      aria-label={t("common.delete")}
                       className="rounded-lg p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10 dark:hover:text-red-400"
                     >
                       <TrashIcon className="h-4 w-4" />
@@ -260,17 +264,17 @@ export function Certifications() {
                   <select
                     value={cert.status}
                     onChange={(e) => void updateStatus(cert, e.target.value as CertStatus)}
-                    aria-label="Status"
+                    aria-label={t("certs.status")}
                     className="rounded-lg border border-slate-200 bg-white py-1 pl-2 pr-7 text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
                   >
                     {STATUSES.map((s) => (
                       <option key={s} value={s}>
-                        {STATUS[s].label}
+                        {statusLabel(s)}
                       </option>
                     ))}
                   </select>
                   <div className="flex items-center gap-3">
-                    <Badge tone={STATUS[cert.status].tone}>{STATUS[cert.status].label}</Badge>
+                    <Badge tone={STATUS[cert.status].tone}>{statusLabel(cert.status)}</Badge>
                     {cert.resourceUrl && (
                       <a
                         href={cert.resourceUrl}
@@ -278,7 +282,7 @@ export function Certifications() {
                         rel="noreferrer"
                         className="inline-flex items-center gap-1 text-xs font-medium text-blue-600 hover:underline dark:text-blue-400"
                       >
-                        Study guide <ExternalLinkIcon className="h-3.5 w-3.5" />
+                        {t("certs.studyGuide")} <ExternalLinkIcon className="h-3.5 w-3.5" />
                       </a>
                     )}
                   </div>
@@ -292,35 +296,35 @@ export function Certifications() {
       <Modal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
-        title={editingId ? "Edit certification" : "Add certification"}
+        title={editingId ? t("certs.edit") : t("certs.add")}
         footer={
           <>
             <Button variant="secondary" onClick={() => setModalOpen(false)}>
-              Cancel
+              {t("common.cancel")}
             </Button>
             <Button type="submit" form="cert-form" disabled={saving || !form.name.trim()}>
-              {saving ? "Saving..." : editingId ? "Save changes" : "Add certification"}
+              {saving ? t("common.saving") : editingId ? t("common.saveChanges") : t("certs.add")}
             </Button>
           </>
         }
       >
         <form id="cert-form" onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Field label="Name">
+            <Field label={t("certs.name")}>
               <input
                 type="text"
                 required
                 autoFocus
-                placeholder="AWS Certified Cloud Practitioner"
+                placeholder={t("certs.namePlaceholder")}
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
                 className={inputClass}
               />
             </Field>
-            <Field label="Provider">
+            <Field label={t("certs.provider")}>
               <input
                 type="text"
-                placeholder="Amazon Web Services"
+                placeholder={t("certs.providerPlaceholder")}
                 value={form.provider}
                 onChange={(e) => setForm({ ...form, provider: e.target.value })}
                 className={inputClass}
@@ -328,7 +332,7 @@ export function Certifications() {
             </Field>
           </div>
 
-          <Field label="Status">
+          <Field label={t("certs.status")}>
             <div className="grid grid-cols-3 gap-2">
               {STATUSES.map((s) => (
                 <button
@@ -341,14 +345,14 @@ export function Certifications() {
                       : "border-slate-200 text-slate-600 hover:border-slate-300 dark:border-slate-700 dark:text-slate-400"
                   }`}
                 >
-                  {STATUS[s].label}
+                  {statusLabel(s)}
                 </button>
               ))}
             </div>
           </Field>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Field label={form.status === "COMPLETED" ? "Date passed" : "Exam date"}>
+            <Field label={form.status === "COMPLETED" ? t("certs.datePassed") : t("certs.examDate")}>
               <input
                 type="date"
                 value={form.examDate}
@@ -356,11 +360,11 @@ export function Certifications() {
                 className={inputClass}
               />
             </Field>
-            <Field label="Study resource">
+            <Field label={t("certs.resource")}>
               <input
                 type="text"
                 inputMode="url"
-                placeholder="Link to study guide or exam page"
+                placeholder={t("certs.resourcePlaceholder")}
                 value={form.resourceUrl}
                 onChange={(e) => setForm({ ...form, resourceUrl: e.target.value })}
                 className={inputClass}
@@ -368,10 +372,10 @@ export function Certifications() {
             </Field>
           </div>
 
-          <Field label="Notes">
+          <Field label={t("certs.notes")}>
             <textarea
               rows={3}
-              placeholder="Study plan, weak areas, score..."
+              placeholder={t("certs.notesPlaceholder")}
               value={form.notes}
               onChange={(e) => setForm({ ...form, notes: e.target.value })}
               className={inputClass}

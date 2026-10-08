@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState, type SubmitEvent } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useUi } from "../context/UiContext";
+import { useI18n } from "../i18n/I18nContext";
+import { formatNodes } from "../i18n/formatNodes";
 import { api, ApiError } from "../lib/api";
 import type { PublicPortfolio as PublicPortfolioData, ProfileComment } from "../lib/types";
 import { Navbar } from "../components/Navbar";
@@ -38,6 +40,7 @@ export function PublicPortfolio() {
   const { slug } = useParams<{ slug: string }>();
   const { user } = useAuth();
   const { toast, confirm } = useUi();
+  const { t, formatDate } = useI18n();
   const [data, setData] = useState<PublicPortfolioData | null>(null);
   const [notFound, setNotFound] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -84,9 +87,9 @@ export function PublicPortfolio() {
       await api.post(`/public/${slug}/comments`, { body: commentText.trim() });
       setCommentText("");
       await loadComments();
-      toast("Comment posted");
+      toast(t("portfolio.commentPosted"));
     } catch (err) {
-      setCommentError(err instanceof ApiError ? err.message : "Failed to post comment");
+      setCommentError(err instanceof ApiError ? err.message : t("portfolio.postFailed"));
     } finally {
       setPosting(false);
     }
@@ -94,19 +97,19 @@ export function PublicPortfolio() {
 
   async function handleCommentDelete(commentId: string) {
     if (!slug) return;
-    const ok = await confirm({ title: "Delete comment?", confirmLabel: "Delete", danger: true });
+    const ok = await confirm({ title: t("portfolio.deleteCommentTitle"), confirmLabel: t("common.delete"), danger: true });
     if (!ok) return;
 
     try {
       await api.delete(`/public/${slug}/comments/${commentId}`);
       await loadComments();
     } catch (err) {
-      toast(err instanceof ApiError ? err.message : "Failed to delete comment", "error");
+      toast(err instanceof ApiError ? err.message : t("portfolio.deleteFailed"), "error");
     }
   }
 
   function copyLink() {
-    void navigator.clipboard.writeText(window.location.href).then(() => toast("Link copied to clipboard"));
+    void navigator.clipboard.writeText(window.location.href).then(() => toast(t("portfolio.linkCopied")));
   }
 
   if (loading) {
@@ -129,10 +132,10 @@ export function PublicPortfolio() {
         <Navbar />
         <div className="flex flex-1 flex-col items-center justify-center px-4 text-center">
           <p className="text-sm font-semibold text-blue-600 dark:text-blue-400">404</p>
-          <h1 className="mt-2 text-2xl font-semibold text-slate-900 dark:text-white">Portfolio not found</h1>
-          <p className="mt-2 text-slate-500 dark:text-slate-400">No portfolio exists at this URL.</p>
+          <h1 className="mt-2 text-2xl font-semibold text-slate-900 dark:text-white">{t("portfolio.notFoundTitle")}</h1>
+          <p className="mt-2 text-slate-500 dark:text-slate-400">{t("portfolio.notFoundDescription")}</p>
           <Link to="/directory" className={`${buttonClass()} mt-6`}>
-            Browse students
+            {t("portfolio.browse")}
           </Link>
         </div>
       </div>
@@ -153,9 +156,9 @@ export function PublicPortfolio() {
       {isOwner && (
         <div className="border-b border-blue-100 bg-blue-50 dark:border-blue-500/20 dark:bg-blue-500/10">
           <div className="mx-auto flex max-w-4xl flex-wrap items-center justify-between gap-2 px-4 py-2.5 text-sm sm:px-6">
-            <p className="text-blue-800 dark:text-blue-200">This is how others see your portfolio.</p>
+            <p className="text-blue-800 dark:text-blue-200">{t("portfolio.ownerBanner")}</p>
             <Link to="/profile" className="font-medium text-blue-700 hover:underline dark:text-blue-300">
-              Edit profile →
+              {t("portfolio.editProfile")}
             </Link>
           </div>
         </div>
@@ -170,11 +173,11 @@ export function PublicPortfolio() {
             </div>
             <div className="flex flex-wrap gap-2">
               <Button variant="secondary" size="sm" onClick={copyLink}>
-                <CopyIcon className="h-4 w-4" /> Share
+                <CopyIcon className="h-4 w-4" /> {t("portfolio.share")}
               </Button>
               {data.resumeUrl && (
                 <a href={data.resumeUrl} target="_blank" rel="noreferrer" className={buttonClass("primary", "sm")}>
-                  <FileTextIcon className="h-4 w-4" /> Resume
+                  <FileTextIcon className="h-4 w-4" /> {t("portfolio.resume")}
                 </a>
               )}
             </div>
@@ -189,7 +192,7 @@ export function PublicPortfolio() {
                 <MapPinIcon className="h-4 w-4" /> {data.school}
               </span>
             )}
-            {data.gradYear && <span>Class of {data.gradYear}</span>}
+            {data.gradYear && <span>{t("common.classOf", { year: data.gradYear })}</span>}
             {links.map(({ href, label, icon: Icon }) => (
               <a
                 key={label}
@@ -207,13 +210,13 @@ export function PublicPortfolio() {
 
       <main className="mx-auto max-w-4xl px-4 pb-20 sm:px-6">
         {data.bio && (
-          <Section title="About">
+          <Section title={t("portfolio.about")}>
             <p className="whitespace-pre-line text-base leading-relaxed text-slate-700 dark:text-slate-300">{data.bio}</p>
           </Section>
         )}
 
         {data.skills.length > 0 && (
-          <Section title="Skills">
+          <Section title={t("portfolio.skills")}>
             <div className="flex flex-wrap gap-2">
               {data.skills.map((skill) => (
                 <span
@@ -227,9 +230,9 @@ export function PublicPortfolio() {
           </Section>
         )}
 
-        <Section title={`Projects (${data.projects.length})`}>
+        <Section title={t("portfolio.projects", { count: data.projects.length })}>
           {data.projects.length === 0 ? (
-            <p className="text-slate-500 dark:text-slate-400">No projects yet.</p>
+            <p className="text-slate-500 dark:text-slate-400">{t("portfolio.noProjects")}</p>
           ) : (
             <div className="grid gap-6 sm:grid-cols-2">
               {data.projects.map((project) => (
@@ -259,7 +262,7 @@ export function PublicPortfolio() {
                           rel="noreferrer"
                           className="inline-flex items-center gap-1.5 font-medium text-blue-600 hover:underline dark:text-blue-400"
                         >
-                          <ExternalLinkIcon className="h-4 w-4" /> Live demo
+                          <ExternalLinkIcon className="h-4 w-4" /> {t("portfolio.liveDemo")}
                         </a>
                       )}
                       {project.githubUrl && (
@@ -269,7 +272,7 @@ export function PublicPortfolio() {
                           rel="noreferrer"
                           className="inline-flex items-center gap-1.5 font-medium text-slate-600 hover:underline dark:text-slate-400"
                         >
-                          <GithubIcon className="h-4 w-4" /> Source code
+                          <GithubIcon className="h-4 w-4" /> {t("portfolio.sourceCode")}
                         </a>
                       )}
                     </div>
@@ -281,7 +284,7 @@ export function PublicPortfolio() {
         </Section>
 
         {data.certifications.length > 0 && (
-          <Section title="Certifications">
+          <Section title={t("portfolio.certifications")}>
             <div className="grid gap-3 sm:grid-cols-2">
               {data.certifications.map((c) => (
                 <div
@@ -303,14 +306,14 @@ export function PublicPortfolio() {
           </Section>
         )}
 
-        <Section title={`Comments (${comments.length})`}>
+        <Section title={t("portfolio.comments", { count: comments.length })}>
           {user ? (
             <form onSubmit={handleCommentSubmit} className="flex gap-3">
               <Avatar name={user.name} size="sm" />
               <div className="flex-1 space-y-2">
                 <textarea
                   rows={3}
-                  placeholder={isOwner ? "Add a note..." : `Leave encouraging feedback for ${data.name.split(" ")[0]}...`}
+                  placeholder={isOwner ? t("portfolio.notePlaceholder") : t("portfolio.commentPlaceholder", { name: data.name.split(" ")[0] ?? "" })}
                   value={commentText}
                   onChange={(e) => setCommentText(e.target.value)}
                   className={inputClass}
@@ -318,28 +321,32 @@ export function PublicPortfolio() {
                 {commentError && <p className="text-sm text-red-600 dark:text-red-400">{commentError}</p>}
                 <div className="flex justify-end">
                   <Button type="submit" size="sm" disabled={posting || commentText.trim().length === 0}>
-                    {posting ? "Posting..." : "Post comment"}
+                    {posting ? t("portfolio.posting") : t("portfolio.post")}
                   </Button>
                 </div>
               </div>
             </form>
           ) : (
             <div className="rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
-              <Link to="/login" className="font-medium text-blue-600 hover:underline dark:text-blue-400">
-                Log in
-              </Link>{" "}
-              or{" "}
-              <Link to="/register" className="font-medium text-blue-600 hover:underline dark:text-blue-400">
-                create an account
-              </Link>{" "}
-              to leave a comment.
+              {formatNodes(t("portfolio.loginToComment"), {
+                login: (
+                  <Link to="/login" className="font-medium text-blue-600 hover:underline dark:text-blue-400">
+                    {t("common.logIn")}
+                  </Link>
+                ),
+                register: (
+                  <Link to="/register" className="font-medium text-blue-600 hover:underline dark:text-blue-400">
+                    {t("portfolio.createAccount")}
+                  </Link>
+                ),
+              })}
             </div>
           )}
 
           <div className="mt-6 space-y-4">
             {comments.length === 0 && (
               <p className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
-                <MessageSquareIcon className="h-4 w-4" /> No comments yet — be the first to leave feedback.
+                <MessageSquareIcon className="h-4 w-4" /> {t("portfolio.noComments")}
               </p>
             )}
 
@@ -350,12 +357,12 @@ export function PublicPortfolio() {
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <p className="text-sm font-semibold text-slate-900 dark:text-white">{comment.authorName}</p>
-                      <p className="text-xs text-slate-400 dark:text-slate-500">{new Date(comment.createdAt).toLocaleDateString()}</p>
+                      <p className="text-xs text-slate-400 dark:text-slate-500">{formatDate(comment.createdAt)}</p>
                     </div>
                     {user && (user.id === comment.authorId || isOwner) && (
                       <button
                         onClick={() => void handleCommentDelete(comment.id)}
-                        aria-label="Delete comment"
+                        aria-label={t("portfolio.deleteComment")}
                         className="rounded p-1 text-slate-400 hover:text-red-600 dark:hover:text-red-400"
                       >
                         <TrashIcon className="h-4 w-4" />

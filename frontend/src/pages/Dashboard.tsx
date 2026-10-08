@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useUi } from "../context/UiContext";
+import { useI18n } from "../i18n/I18nContext";
 import { api } from "../lib/api";
 import type { Certification, InterviewAttempt, StudentProfile } from "../lib/types";
 import { completenessScore, profileChecklist } from "../lib/profile";
@@ -23,11 +24,11 @@ import {
   type IconComponent,
 } from "../components/icons";
 
-function greeting() {
+function greetingKey() {
   const hour = new Date().getHours();
-  if (hour < 12) return "Good morning";
-  if (hour < 18) return "Good afternoon";
-  return "Good evening";
+  if (hour < 12) return "dashboard.morning" as const;
+  if (hour < 18) return "dashboard.afternoon" as const;
+  return "dashboard.evening" as const;
 }
 
 function daysUntil(date: string) {
@@ -74,6 +75,7 @@ function scoreFrom(feedback: string | null) {
 export function Dashboard() {
   const { user } = useAuth();
   const { toast } = useUi();
+  const { t, formatDate } = useI18n();
   const [profile, setProfile] = useState<StudentProfile | null>(null);
   const [certifications, setCertifications] = useState<Certification[]>([]);
   const [attempts, setAttempts] = useState<InterviewAttempt[]>([]);
@@ -102,10 +104,10 @@ export function Dashboard() {
   const portfolioUrl = profile ? `${window.location.origin}/p/${profile.slug}` : "";
 
   function copyLink() {
-    void navigator.clipboard.writeText(portfolioUrl).then(() => toast("Portfolio link copied"));
+    void navigator.clipboard.writeText(portfolioUrl).then(() => toast(t("dashboard.linkCopied")));
   }
 
-  const today = new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
+  const today = formatDate(new Date(), { weekday: "long", month: "long", day: "numeric" });
 
   return (
     <div className="space-y-8">
@@ -113,7 +115,7 @@ export function Dashboard() {
         <div>
           <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{today}</p>
           <h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl dark:text-white">
-            {greeting()}, {user?.name.split(" ")[0]} 👋
+            {t(greetingKey(), { name: user?.name.split(" ")[0] ?? "" })}
           </h1>
         </div>
         {profile && (
@@ -122,7 +124,7 @@ export function Dashboard() {
               onClick={copyLink}
               className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
             >
-              <CopyIcon className="h-4 w-4" /> Copy link
+              <CopyIcon className="h-4 w-4" /> {t("dashboard.copyLink")}
             </button>
             <a
               href={`/p/${profile.slug}`}
@@ -130,7 +132,7 @@ export function Dashboard() {
               rel="noreferrer"
               className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white shadow-sm shadow-blue-600/20 transition hover:bg-blue-700"
             >
-              View portfolio <ExternalLinkIcon className="h-4 w-4" />
+              {t("dashboard.viewPortfolio")} <ExternalLinkIcon className="h-4 w-4" />
             </a>
           </div>
         )}
@@ -145,33 +147,33 @@ export function Dashboard() {
       ) : (
         <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
           <StatCard
-            label="Projects"
+            label={t("dashboard.projects")}
             value={projects.length}
-            sub={projects.length ? "Showcased on your portfolio" : "Add your first project"}
+            sub={projects.length ? t("dashboard.projectsSome") : t("dashboard.projectsNone")}
             icon={FolderIcon}
             tone="bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400"
             to="/projects"
           />
           <StatCard
-            label="Certifications"
+            label={t("dashboard.certifications")}
             value={`${completedCerts}/${certifications.length}`}
-            sub="Completed / tracked"
+            sub={t("dashboard.certificationsSub")}
             icon={AwardIcon}
             tone="bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400"
             to="/certifications"
           />
           <StatCard
-            label="Interview practice"
+            label={t("dashboard.practice")}
             value={attempts.length}
-            sub={avgScore ? `Average score ${avgScore}/10` : "Answers practiced"}
+            sub={avgScore ? t("dashboard.practiceAverage", { score: avgScore }) : t("dashboard.practiceSub")}
             icon={MicIcon}
             tone="bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-400"
             to="/interview"
           />
           <StatCard
-            label="Skills"
+            label={t("dashboard.skills")}
             value={profile?.skills.length ?? 0}
-            sub="Listed on your profile"
+            sub={t("dashboard.skillsSub")}
             icon={SparklesIcon}
             tone="bg-violet-50 text-violet-600 dark:bg-violet-500/10 dark:text-violet-400"
             to="/profile"
@@ -184,11 +186,9 @@ export function Dashboard() {
           <div className="flex flex-col gap-6 sm:flex-row sm:items-center">
             <ProgressRing value={loading ? 0 : score} size={112} stroke={10} />
             <div className="flex-1">
-              <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Portfolio strength</h2>
+              <h2 className="text-lg font-semibold text-slate-900 dark:text-white">{t("dashboard.strengthTitle")}</h2>
               <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                {score === 100
-                  ? "Your portfolio is complete — great work! Keep it fresh with new projects."
-                  : "Complete these steps to make your portfolio stand out to recruiters."}
+                {score === 100 ? t("dashboard.strengthDone") : t("dashboard.strengthTodo")}
               </p>
             </div>
           </div>
@@ -210,7 +210,7 @@ export function Dashboard() {
                   >
                     {item.done && <CheckIcon className="h-3 w-3" strokeWidth={3} />}
                   </span>
-                  <span className={item.done ? "line-through" : ""}>{item.label}</span>
+                  <span className={item.done ? "line-through" : ""}>{t(item.label)}</span>
                 </Link>
               </li>
             ))}
@@ -223,12 +223,12 @@ export function Dashboard() {
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/15">
               <SparklesIcon className="h-5 w-5" />
             </div>
-            <h2 className="mt-4 text-lg font-semibold">AI Career Assistant</h2>
+            <h2 className="mt-4 text-lg font-semibold">{t("dashboard.aiTitle")}</h2>
             <p className="mt-1 text-sm text-white/80">
-              Get personalized advice on your resume, projects, and interviews — it already knows your profile.
+              {t("dashboard.aiDescription")}
             </p>
             <div className="mt-4 flex-1 space-y-2">
-              {["Review my portfolio", "Write a resume bullet", "Run a mock interview"].map((s) => (
+              {[t("dashboard.aiPrompt1"), t("dashboard.aiPrompt2"), t("dashboard.aiPrompt3")].map((s) => (
                 <Link
                   key={s}
                   to="/assistant"
@@ -242,7 +242,7 @@ export function Dashboard() {
               to="/assistant"
               className="mt-5 inline-flex items-center justify-center gap-2 rounded-lg bg-white px-4 py-2.5 text-sm font-semibold text-blue-700 transition hover:bg-blue-50"
             >
-              Start a chat <ArrowRightIcon className="h-4 w-4" />
+              {t("dashboard.startChat")} <ArrowRightIcon className="h-4 w-4" />
             </Link>
           </div>
         </div>
@@ -251,17 +251,17 @@ export function Dashboard() {
       <div className="grid gap-6 lg:grid-cols-3">
         <Card>
           <div className="flex items-center justify-between">
-            <h2 className="font-semibold text-slate-900 dark:text-white">Upcoming exams</h2>
+            <h2 className="font-semibold text-slate-900 dark:text-white">{t("dashboard.upcomingExams")}</h2>
             <Link to="/certifications" className="text-xs font-medium text-blue-600 hover:underline dark:text-blue-400">
-              View all
+              {t("common.viewAll")}
             </Link>
           </div>
           {upcoming.length === 0 ? (
             <div className="mt-6 text-center">
               <CalendarIcon className="mx-auto h-8 w-8 text-slate-300 dark:text-slate-600" />
-              <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">No upcoming exams scheduled.</p>
+              <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">{t("dashboard.noExams")}</p>
               <Link to="/certifications" className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-blue-600 dark:text-blue-400">
-                <PlusIcon className="h-4 w-4" /> Add certification
+                <PlusIcon className="h-4 w-4" /> {t("dashboard.addCertification")}
               </Link>
             </div>
           ) : (
@@ -272,7 +272,7 @@ export function Dashboard() {
                   <li key={c.id} className="flex items-center gap-3">
                     <div className="flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-800">
                       <span className="text-[10px] font-semibold uppercase text-slate-500 dark:text-slate-400">
-                        {new Date(c.examDate!).toLocaleDateString(undefined, { month: "short" })}
+                        {formatDate(c.examDate!, { month: "short" })}
                       </span>
                       <span className="text-sm font-bold leading-none text-slate-900 dark:text-white">
                         {new Date(c.examDate!).getDate()}
@@ -280,10 +280,10 @@ export function Dashboard() {
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium text-slate-900 dark:text-slate-100">{c.name}</p>
-                      <p className="text-xs text-slate-500 dark:text-slate-400">{c.provider ?? "Certification"}</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">{c.provider ?? t("dashboard.certificationFallback")}</p>
                     </div>
                     <Badge tone={days <= 7 ? "red" : days <= 30 ? "amber" : "slate"}>
-                      {days === 0 ? "Today" : `${days}d`}
+                      {days === 0 ? t("common.today") : t("dashboard.daysShort", { days })}
                     </Badge>
                   </li>
                 );
@@ -294,19 +294,19 @@ export function Dashboard() {
 
         <Card className="lg:col-span-2">
           <div className="flex items-center justify-between">
-            <h2 className="font-semibold text-slate-900 dark:text-white">Recent interview practice</h2>
+            <h2 className="font-semibold text-slate-900 dark:text-white">{t("dashboard.recentPractice")}</h2>
             <Link to="/interview" className="text-xs font-medium text-blue-600 hover:underline dark:text-blue-400">
-              Practice now
+              {t("dashboard.practiceNow")}
             </Link>
           </div>
           {attempts.length === 0 ? (
             <div className="mt-6 text-center">
               <MicIcon className="mx-auto h-8 w-8 text-slate-300 dark:text-slate-600" />
               <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-                You haven't practiced yet. Answer a question and get instant AI feedback.
+                {t("dashboard.noPractice")}
               </p>
               <Link to="/interview" className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-blue-600 dark:text-blue-400">
-                Start practicing <ArrowRightIcon className="h-4 w-4" />
+                {t("dashboard.startPracticing")} <ArrowRightIcon className="h-4 w-4" />
               </Link>
             </div>
           ) : (
@@ -318,8 +318,7 @@ export function Dashboard() {
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium text-slate-900 dark:text-slate-100">{a.question.prompt}</p>
                       <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
-                        {a.question.category.charAt(0) + a.question.category.slice(1).toLowerCase()} ·{" "}
-                        {new Date(a.createdAt).toLocaleDateString()}
+                        {t(`interview.category.${a.question.category}`)} · {formatDate(a.createdAt)}
                       </p>
                     </div>
                     {s !== null && <Badge tone={s >= 8 ? "green" : s >= 5 ? "amber" : "red"}>{s}/10</Badge>}

@@ -1,13 +1,12 @@
 import type { ReactNode } from "react";
 import { Logo } from "./Logo";
+import { useI18n } from "../i18n/I18nContext";
+import { LanguageSwitcher } from "./LanguageSwitcher";
 
-const highlights = [
-  "A shareable portfolio page with your projects and skills",
-  "Track certifications from planning to completed",
-  "Practice interview questions with instant AI feedback",
-];
+const highlights = ["auth.highlight1", "auth.highlight2", "auth.highlight3"] as const;
 
 export function AuthLayout({ title, subtitle, children }: { title: string; subtitle: string; children: ReactNode }) {
+  const { t } = useI18n();
   return (
     <div className="grid min-h-screen bg-white lg:grid-cols-2 dark:bg-slate-950">
       <aside className="relative hidden overflow-hidden bg-slate-900 p-12 text-white lg:flex lg:flex-col lg:justify-between">
@@ -20,7 +19,7 @@ export function AuthLayout({ title, subtitle, children }: { title: string; subti
 
         <div className="relative">
           <h2 className="text-3xl font-semibold leading-tight tracking-tight">
-            Build the portfolio that gets you hired.
+            {t("auth.panelTitle")}
           </h2>
           <ul className="mt-8 space-y-4">
             {highlights.map((item) => (
@@ -28,7 +27,7 @@ export function AuthLayout({ title, subtitle, children }: { title: string; subti
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className="mt-0.5 h-5 w-5 shrink-0 text-blue-400">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                 </svg>
-                {item}
+                {t(item)}
               </li>
             ))}
           </ul>
@@ -38,8 +37,11 @@ export function AuthLayout({ title, subtitle, children }: { title: string; subti
       </aside>
 
       <main className="flex flex-col px-4 py-8 sm:px-6">
-        <div className="lg:hidden">
-          <Logo />
+        <div className="flex items-center justify-between gap-3">
+          <div className="lg:hidden">
+            <Logo />
+          </div>
+          <LanguageSwitcher className="ml-auto" />
         </div>
         <div className="flex flex-1 items-center justify-center py-10">
           <div className="w-full max-w-sm">

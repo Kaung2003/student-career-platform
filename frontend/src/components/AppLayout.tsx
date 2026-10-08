@@ -7,6 +7,9 @@ import type { StudentProfile } from "../lib/types";
 import { Logo } from "./Logo";
 import { Avatar } from "./ui/Avatar";
 import { ChatWidget } from "./ChatWidget";
+import { LanguageSwitcher } from "./LanguageSwitcher";
+import { useI18n } from "../i18n/I18nContext";
+import type { MessageKey } from "../i18n/locales/en";
 import {
   ArrowLeftIcon,
   AwardIcon,
@@ -34,51 +37,51 @@ export const PROFILE_UPDATED_EVENT = "scp:profile-updated";
 
 interface NavItem {
   to: string;
-  label: string;
+  label: MessageKey;
   icon: IconComponent;
   badge?: string;
 }
 
-type Section = { title: string; items: NavItem[] };
+type Section = { title: MessageKey; items: NavItem[] };
 
 const sections: Section[] = [
   {
-    title: "Overview",
+    title: "nav.overview",
     items: [
-      { to: "/dashboard", label: "Dashboard", icon: DashboardIcon },
-      { to: "/assistant", label: "AI Assistant", icon: SparklesIcon, badge: "AI" },
+      { to: "/dashboard", label: "common.dashboard", icon: DashboardIcon },
+      { to: "/assistant", label: "nav.assistant", icon: SparklesIcon, badge: "AI" },
     ],
   },
   {
-    title: "Portfolio",
+    title: "nav.portfolio",
     items: [
-      { to: "/profile", label: "Profile", icon: UserIcon },
-      { to: "/projects", label: "Projects", icon: FolderIcon },
-      { to: "/certifications", label: "Certifications", icon: AwardIcon },
+      { to: "/profile", label: "nav.profile", icon: UserIcon },
+      { to: "/projects", label: "nav.projects", icon: FolderIcon },
+      { to: "/certifications", label: "nav.certifications", icon: AwardIcon },
     ],
   },
   {
-    title: "Career",
+    title: "nav.career",
     items: [
-      { to: "/interview", label: "Interview Prep", icon: MicIcon },
-      { to: "/directory", label: "Discover", icon: SearchIcon },
+      { to: "/interview", label: "nav.interview", icon: MicIcon },
+      { to: "/directory", label: "common.discover", icon: SearchIcon },
     ],
   },
   {
-    title: "Support",
-    items: [{ to: "/feedback", label: "Feedback", icon: MessageSquareIcon }],
+    title: "nav.support",
+    items: [{ to: "/feedback", label: "nav.feedback", icon: MessageSquareIcon }],
   },
 ];
 
 const adminSections: Section[] = [
   {
-    title: "Admin",
+    title: "nav.admin",
     items: [
-      { to: "/admin", label: "Overview", icon: DashboardIcon },
-      { to: "/admin/users", label: "Users", icon: UsersIcon },
-      { to: "/admin/feedback", label: "Feedback inbox", icon: InboxIcon },
-      { to: "/admin/questions", label: "Interview questions", icon: HelpCircleIcon },
-      { to: "/admin/comments", label: "Comments", icon: MessageSquareIcon },
+      { to: "/admin", label: "nav.overview", icon: DashboardIcon },
+      { to: "/admin/users", label: "nav.users", icon: UsersIcon },
+      { to: "/admin/feedback", label: "nav.feedbackInbox", icon: InboxIcon },
+      { to: "/admin/questions", label: "nav.questions", icon: HelpCircleIcon },
+      { to: "/admin/comments", label: "nav.comments", icon: MessageSquareIcon },
     ],
   },
 ];
@@ -96,13 +99,14 @@ function SidebarContent({
 }) {
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const { t } = useI18n();
   const navigate = useNavigate();
 
   const navSections: Section[] =
     variant === "admin"
       ? adminSections
       : user?.role === "ADMIN"
-        ? [...sections, { title: "Administration", items: [{ to: "/admin", label: "Admin panel", icon: ShieldIcon }] }]
+        ? [...sections, { title: "nav.administration", items: [{ to: "/admin", label: "nav.adminPanel", icon: ShieldIcon }] }]
         : sections;
 
   function handleLogout() {
@@ -126,7 +130,7 @@ function SidebarContent({
         {navSections.map((section) => (
           <div key={section.title}>
             <p className="px-3 pb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-              {section.title}
+              {t(section.title)}
             </p>
             <div className="space-y-0.5">
               {section.items.map(({ to, label, icon: Icon, badge }) => (
@@ -144,7 +148,7 @@ function SidebarContent({
                   }
                 >
                   <Icon className="h-[18px] w-[18px] shrink-0" />
-                  <span className="flex-1">{label}</span>
+                  <span className="flex-1">{t(label)}</span>
                   {badge && (
                     <span className="rounded-md bg-gradient-to-r from-violet-500 to-blue-500 px-1.5 py-0.5 text-[10px] font-bold text-white">
                       {badge}
@@ -164,14 +168,14 @@ function SidebarContent({
             onClick={onNavigate}
             className="flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-800"
           >
-            <ArrowLeftIcon className="h-4 w-4" /> Back to student app
+            <ArrowLeftIcon className="h-4 w-4" /> {t("nav.backToApp")}
           </Link>
         </div>
       )}
 
       {variant === "app" && slug && (
         <div className="mx-3 mb-3 rounded-xl border border-slate-200 bg-gradient-to-br from-blue-50 to-indigo-50 p-4 dark:border-slate-800 dark:from-blue-500/10 dark:to-indigo-500/5">
-          <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">Your public portfolio</p>
+          <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">{t("nav.yourPortfolio")}</p>
           <p className="mt-0.5 truncate text-xs text-slate-500 dark:text-slate-400">/p/{slug}</p>
           <a
             href={`/p/${slug}`}
@@ -179,7 +183,7 @@ function SidebarContent({
             rel="noreferrer"
             className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:underline dark:text-blue-400"
           >
-            View live page <ExternalLinkIcon className="h-3.5 w-3.5" />
+            {t("nav.viewLive")} <ExternalLinkIcon className="h-3.5 w-3.5" />
           </a>
         </div>
       )}
@@ -192,20 +196,21 @@ function SidebarContent({
             <p className="truncate text-xs text-slate-500 dark:text-slate-400">{user?.email}</p>
           </div>
         </div>
+        <LanguageSwitcher className="mt-1 w-full [&>select]:w-full" />
         <div className="mt-1 grid grid-cols-2 gap-1">
           <button
             onClick={toggleTheme}
             className="flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-slate-600 transition hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
           >
             {theme === "dark" ? <SunIcon className="h-4 w-4" /> : <MoonIcon className="h-4 w-4" />}
-            {theme === "dark" ? "Light" : "Dark"}
+            {theme === "dark" ? t("common.light") : t("common.dark")}
           </button>
           <button
             onClick={handleLogout}
             className="flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-slate-600 transition hover:bg-red-50 hover:text-red-600 dark:text-slate-400 dark:hover:bg-red-500/10 dark:hover:text-red-400"
           >
             <LogOutIcon className="h-4 w-4" />
-            Log out
+            {t("common.logOut")}
           </button>
         </div>
       </div>
@@ -215,6 +220,7 @@ function SidebarContent({
 
 export function AppLayout({ children, variant = "app" }: { children: ReactNode; variant?: LayoutVariant }) {
   const location = useLocation();
+  const { t } = useI18n();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [slug, setSlug] = useState<string | null>(null);
   const fullBleed = location.pathname === "/assistant";
@@ -248,7 +254,7 @@ export function AppLayout({ children, variant = "app" }: { children: ReactNode; 
           <aside className="animate-pop-in absolute inset-y-0 left-0 w-72 max-w-[85vw] bg-white shadow-xl dark:bg-slate-900">
             <button
               onClick={() => setMobileOpen(false)}
-              aria-label="Close menu"
+              aria-label={t("nav.closeMenu")}
               className="absolute right-3 top-4 rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
             >
               <XIcon className="h-5 w-5" />
@@ -262,7 +268,7 @@ export function AppLayout({ children, variant = "app" }: { children: ReactNode; 
         <header className="sticky top-0 z-20 flex h-14 items-center justify-between border-b border-slate-200 bg-white/90 px-4 backdrop-blur lg:hidden dark:border-slate-800 dark:bg-slate-900/90">
           <button
             onClick={() => setMobileOpen(true)}
-            aria-label="Open menu"
+            aria-label={t("nav.openMenu")}
             className="-ml-1 rounded-lg p-2 text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
           >
             <MenuIcon className="h-5 w-5" />
@@ -273,7 +279,7 @@ export function AppLayout({ children, variant = "app" }: { children: ReactNode; 
               Admin
             </span>
           ) : (
-          <Link to="/assistant" aria-label="AI Assistant" className="rounded-lg p-2 text-violet-600 hover:bg-violet-50 dark:text-violet-400 dark:hover:bg-violet-500/10">
+          <Link to="/assistant" aria-label={t("nav.assistant")} className="rounded-lg p-2 text-violet-600 hover:bg-violet-50 dark:text-violet-400 dark:hover:bg-violet-500/10">
             <SparklesIcon className="h-5 w-5" />
           </Link>
           )}

@@ -63,3 +63,11 @@ export async function complete(system: string, messages: AiMessage[]): Promise<s
 
   throw lastError;
 }
+
+const SUPPORTED_LANGUAGES = ["English", "Japanese", "Simplified Chinese", "Spanish", "German", "Burmese"];
+
+/** System-prompt suffix asking the model to answer in the user's UI language (ignored if unknown). */
+export function languageInstruction(language: unknown): string {
+  if (typeof language !== "string" || !SUPPORTED_LANGUAGES.includes(language) || language === "English") return "";
+  return `\n\nAlways write your entire response in ${language}, even if the user's text or the context above is in English. Keep proper nouns, technology names, and code unchanged.`;
+}

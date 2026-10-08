@@ -1,6 +1,7 @@
 import { useState, type SubmitEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { useI18n } from "../i18n/I18nContext";
 import { ApiError } from "../lib/api";
 import { AuthLayout } from "../components/AuthLayout";
 import { Field, inputClass } from "../components/ui/Field";
@@ -9,6 +10,7 @@ import { Button } from "../components/ui/Button";
 export function Register() {
   const { register } = useAuth();
   const navigate = useNavigate();
+  const { t } = useI18n();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -24,46 +26,46 @@ export function Register() {
       await register(name, email, password);
       navigate("/dashboard");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Failed to register");
+      setError(err instanceof ApiError ? err.message : t("auth.registerFailed"));
     } finally {
       setSubmitting(false);
     }
   }
 
   return (
-    <AuthLayout title="Create your account" subtitle="Start building your professional portfolio — free.">
+    <AuthLayout title={t("auth.registerTitle")} subtitle={t("auth.registerSubtitle")}>
       <form onSubmit={handleSubmit} className="space-y-4">
-        <Field label="Name">
+        <Field label={t("auth.name")}>
           <input
             type="text"
             required
             autoComplete="name"
-            placeholder="Jane Doe"
+            placeholder={t("auth.namePlaceholder")}
             value={name}
             onChange={(e) => setName(e.target.value)}
             className={inputClass}
           />
         </Field>
 
-        <Field label="Email">
+        <Field label={t("auth.email")}>
           <input
             type="email"
             required
             autoComplete="email"
-            placeholder="you@school.edu"
+            placeholder={t("auth.emailPlaceholder")}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             className={inputClass}
           />
         </Field>
 
-        <Field label="Password">
+        <Field label={t("auth.password")}>
           <input
             type="password"
             required
             minLength={6}
             autoComplete="new-password"
-            placeholder="At least 6 characters"
+            placeholder={t("auth.passwordPlaceholder")}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className={inputClass}
@@ -73,14 +75,14 @@ export function Register() {
         {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
 
         <Button type="submit" disabled={submitting} className="w-full py-2.5">
-          {submitting ? "Creating account..." : "Register"}
+          {submitting ? t("auth.creatingAccount") : t("auth.register")}
         </Button>
       </form>
 
       <p className="mt-6 text-center text-sm text-slate-500 dark:text-slate-400">
-        Already have an account?{" "}
+        {t("auth.haveAccount")}{" "}
         <Link to="/login" className="font-medium text-blue-600 hover:underline dark:text-blue-400">
-          Log in
+          {t("common.logIn")}
         </Link>
       </p>
     </AuthLayout>

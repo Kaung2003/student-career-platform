@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode, type SubmitEvent } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useUi } from "../context/UiContext";
+import { useI18n } from "../i18n/I18nContext";
 import { api, ApiError } from "../lib/api";
 import type { StudentProfile } from "../lib/types";
 import { SKILL_SUGGESTIONS } from "../lib/profile";
@@ -32,6 +33,7 @@ function Section({ title, description, children }: { title: string; description:
 export function Profile() {
   const { user } = useAuth();
   const { toast } = useUi();
+  const { t } = useI18n();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -90,9 +92,9 @@ export function Profile() {
       });
       setSlug(res.profile.slug);
       window.dispatchEvent(new Event(PROFILE_UPDATED_EVENT));
-      toast("Profile saved");
+      toast(t("profile.saved"));
     } catch (err) {
-      const message = err instanceof ApiError ? err.message : "Failed to save profile";
+      const message = err instanceof ApiError ? err.message : t("profile.saveFailed");
       setError(message);
       toast(message, "error");
     } finally {
@@ -117,8 +119,8 @@ export function Profile() {
   return (
     <form onSubmit={handleSubmit}>
       <PageHeader
-        title="Profile"
-        description="This information appears on your public portfolio page."
+        title={t("profile.title")}
+        description={t("profile.description")}
         actions={
           <>
             {slug && (
@@ -128,11 +130,11 @@ export function Profile() {
                 rel="noreferrer"
                 className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
               >
-                Preview <ExternalLinkIcon className="h-4 w-4" />
+                {t("profile.preview")} <ExternalLinkIcon className="h-4 w-4" />
               </a>
             )}
             <Button type="submit" disabled={saving}>
-              {saving ? "Saving..." : "Save changes"}
+              {saving ? t("common.saving") : t("common.saveChanges")}
             </Button>
           </>
         }
@@ -140,11 +142,11 @@ export function Profile() {
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
-          <Section title="About you" description="Introduce yourself to recruiters and classmates.">
-            <Field label="Headline" action={<AiImproveButton kind="headline" text={headline} context={aiContext} onResult={setHeadline} />}>
+          <Section title={t("profile.aboutTitle")} description={t("profile.aboutDescription")}>
+            <Field label={t("profile.headline")} action={<AiImproveButton kind="headline" text={headline} context={aiContext} onResult={setHeadline} />}>
               <input
                 type="text"
-                placeholder="e.g. Computer Science student building accessible web apps"
+                placeholder={t("profile.headlinePlaceholder")}
                 value={headline}
                 maxLength={120}
                 onChange={(e) => setHeadline(e.target.value)}
@@ -153,38 +155,38 @@ export function Profile() {
             </Field>
 
             <Field
-              label="Bio"
-              hint={`${bio.length} characters · aim for 3–5 sentences`}
+              label={t("profile.bio")}
+              hint={t("profile.bioHint", { count: bio.length })}
               action={<AiImproveButton kind="bio" text={bio} context={aiContext} onResult={setBio} />}
             >
               <textarea
                 rows={5}
                 value={bio}
-                placeholder="What are you studying, what do you love building, and what are you looking for?"
+                placeholder={t("profile.bioPlaceholder")}
                 onChange={(e) => setBio(e.target.value)}
                 className={inputClass}
               />
             </Field>
 
-            <Field label="Skills" hint="Press Enter or comma to add a skill.">
-              <TagInput value={skills} onChange={setSkills} placeholder="React, Python, Public speaking..." suggestions={SKILL_SUGGESTIONS} />
+            <Field label={t("profile.skills")} hint={t("profile.skillsHint")}>
+              <TagInput value={skills} onChange={setSkills} placeholder={t("profile.skillsPlaceholder")} suggestions={SKILL_SUGGESTIONS} />
             </Field>
           </Section>
 
-          <Section title="Education" description="Where you study and when you graduate.">
+          <Section title={t("profile.educationTitle")} description={t("profile.educationDescription")}>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               <div className="sm:col-span-2">
-                <Field label="School">
+                <Field label={t("profile.school")}>
                   <input
                     type="text"
-                    placeholder="University name"
+                    placeholder={t("profile.schoolPlaceholder")}
                     value={school}
                     onChange={(e) => setSchool(e.target.value)}
                     className={inputClass}
                   />
                 </Field>
               </div>
-              <Field label="Graduation year">
+              <Field label={t("profile.gradYear")}>
                 <input
                   type="number"
                   min={1950}
@@ -198,7 +200,7 @@ export function Profile() {
             </div>
           </Section>
 
-          <Section title="Links" description="Help people find more of your work.">
+          <Section title={t("profile.linksTitle")} description={t("profile.linksDescription")}>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Field label="GitHub">
                 <input type="text" inputMode="url" placeholder="https://github.com/you" value={github} onChange={(e) => setGithub(e.target.value)} className={inputClass} />
@@ -213,10 +215,10 @@ export function Profile() {
                 />
               </Field>
             </div>
-            <Field label="Personal website">
+            <Field label={t("profile.website")}>
               <input type="text" inputMode="url" placeholder="https://you.dev" value={website} onChange={(e) => setWebsite(e.target.value)} className={inputClass} />
             </Field>
-            <Field label="Portfolio URL" hint="Letters, numbers, and dashes only.">
+            <Field label={t("profile.portfolioUrl")} hint={t("profile.portfolioUrlHint")}>
               <div className="flex items-center overflow-hidden rounded-lg border border-slate-300 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/20 dark:border-slate-700">
                 <span className="border-r border-slate-300 bg-slate-50 px-3 py-2 text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-400">
                   {window.location.host}/p/
@@ -231,23 +233,23 @@ export function Profile() {
             </Field>
           </Section>
 
-          <Section title="Documents" description="Upload PDFs or paste links to your resume and transcript.">
+          <Section title={t("profile.documentsTitle")} description={t("profile.documentsDescription")}>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <Field label="Resume">
+              <Field label={t("profile.resume")}>
                 <FileUploadField
                   value={resumeUrl}
                   onChange={setResumeUrl}
                   uploadType="resume"
-                  placeholder="Paste a URL or upload a PDF"
+                  placeholder={t("profile.documentPlaceholder")}
                   accept="application/pdf"
                 />
               </Field>
-              <Field label="Transcript">
+              <Field label={t("profile.transcript")}>
                 <FileUploadField
                   value={transcriptUrl}
                   onChange={setTranscriptUrl}
                   uploadType="transcript"
-                  placeholder="Paste a URL or upload a PDF"
+                  placeholder={t("profile.documentPlaceholder")}
                   accept="application/pdf"
                 />
               </Field>
@@ -258,13 +260,13 @@ export function Profile() {
 
           <div className="flex justify-end">
             <Button type="submit" disabled={saving} className="w-full sm:w-auto">
-              {saving ? "Saving..." : "Save changes"}
+              {saving ? t("common.saving") : t("common.saveChanges")}
             </Button>
           </div>
         </div>
 
         <div className="lg:sticky lg:top-8 lg:self-start">
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">Live preview</p>
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">{t("profile.livePreview")}</p>
           <Card padded={false} className="overflow-hidden">
             <div className="h-20 bg-gradient-to-r from-blue-600 to-indigo-600" />
             <div className="-mt-10 px-5 pb-5">
@@ -272,12 +274,12 @@ export function Profile() {
                 <Avatar name={user?.name ?? "?"} size="lg" />
               </div>
               <p className="mt-3 text-lg font-semibold text-slate-900 dark:text-white">{user?.name}</p>
-              <p className="text-sm text-slate-600 dark:text-slate-400">{headline || "Your headline appears here"}</p>
+              <p className="text-sm text-slate-600 dark:text-slate-400">{headline || t("profile.headlineFallback")}</p>
               {(school || gradYear) && (
                 <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                   {school}
                   {school && gradYear && " · "}
-                  {gradYear && `Class of ${gradYear}`}
+                  {gradYear && t("common.classOf", { year: gradYear })}
                 </p>
               )}
               {bio && <p className="mt-3 line-clamp-4 text-sm text-slate-600 dark:text-slate-400">{bio}</p>}

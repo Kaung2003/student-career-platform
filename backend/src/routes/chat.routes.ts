@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { requireAuth } from "../middleware/require-auth.js";
 import { prisma } from "../lib/prisma.js";
-import { complete, isAiConfigured } from "../lib/ai.js";
+import { complete, isAiConfigured, languageInstruction } from "../lib/ai.js";
 
 export const chatRouter = Router();
 
@@ -35,7 +35,7 @@ chatRouter.post("/message", async (req, res) => {
     return;
   }
 
-  const { message, history } = req.body ?? {};
+  const { message, history, language } = req.body ?? {};
 
   if (typeof message !== "string" || message.trim().length === 0) {
     res.status(400).json({ error: "message is required" });
@@ -52,7 +52,7 @@ chatRouter.post("/message", async (req, res) => {
     return;
   }
 
-  const system = await buildSystemPrompt(req.auth!.userId);
+  const system = (await buildSystemPrompt(req.auth!.userId)) + languageInstruction(language);
   const recentHistory = ((history as ChatMessage[] | undefined) ?? []).slice(-MAX_HISTORY);
   // Gemini requires the conversation to start with a user turn.
   while (recentHistory[0]?.role === "assistant") recentHistory.shift();
@@ -82,7 +82,7 @@ chatRouter.post("/improve", async (req, res) => {
     return;
   }
 
-  const { kind, text, context } = req.body ?? {};
+  const { kind, text, context, language } = req.body ?? {};
 
   if (typeof kind !== "string" || !(kind in IMPROVE_PROMPTS)) {
     res.status(400).json({ error: `kind must be one of: ${Object.keys(IMPROVE_PROMPTS).join(", ")}` });
@@ -95,7 +95,7 @@ chatRouter.post("/improve", async (req, res) => {
   }
 
   const details = typeof context === "string" ? context.slice(0, 1000) : "";
-  const system = `${IMPROVE_PROMPTS[kind as ImproveKind]}\n\n${await buildSystemPrompt(req.auth!.userId, false)}`;
+  const system = `${IMPROVE_PROMPTS[kind as ImproveKind]}\n\n${await buildSystemPrompt(req.auth!.userId, false)}${languageInstruction(language)}`;
   const input = text.trim()
     ? `${details ? `Context: ${details}\n\n` : ""}Current text:\n${text}`
     : `${details ? `Context: ${details}\n\n` : ""}The student hasn't written anything yet. Draft one from their profile.`;

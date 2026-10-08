@@ -1,6 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { api, ApiError } from "../lib/api";
 import { useAuth } from "./AuthContext";
+import { aiLanguageName, useI18n } from "../i18n/I18nContext";
+import type { MessageKey } from "../i18n/locales/en";
 
 export interface ChatMessage {
   role: "user" | "assistant";
@@ -52,6 +54,7 @@ function makeTitle(text: string) {
 
 export function ChatProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
+  const { t, language } = useI18n();
   const [configured, setConfigured] = useState<boolean | null>(null);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -92,7 +95,11 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     setSending(true);
     setError(null);
     try {
-      const res = await api.post<{ reply: string }>("/chat/message", { message: text, history });
+      const res = await api.post<{ reply: string }>("/chat/message", {
+        message: text,
+        history,
+        language: aiLanguageName(language),
+      });
       setConversations((list) =>
         list.map((c) =>
           c.id === conversationId
@@ -101,11 +108,11 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         ),
       );
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Couldn't reach the assistant. Check your connection.");
+      setError(err instanceof ApiError ? err.message : t("chat.error"));
     } finally {
       setSending(false);
     }
-  }, []);
+  }, [language, t]);
 
   const send = useCallback(
     async (raw: string) => {
@@ -183,11 +190,11 @@ export function useChat(): ChatContextValue {
   return ctx;
 }
 
-export const SUGGESTED_PROMPTS = [
-  { title: "Review my profile", prompt: "Review my profile and tell me the three most important things to improve for recruiters." },
-  { title: "Write a resume bullet", prompt: "Help me turn one of my projects into a strong resume bullet point using the XYZ formula." },
-  { title: "Mock interview", prompt: "Run a short mock interview with me. Ask one question at a time and give feedback after each answer." },
-  { title: "Plan my next steps", prompt: "Based on my skills, suggest a 30-day plan to become a stronger candidate for internships." },
-  { title: "Cover letter", prompt: "Help me draft a concise cover letter for an entry-level role. Ask me what you need to know first." },
-  { title: "Which certification?", prompt: "Which certifications would be most valuable for me right now, and why?" },
+export const SUGGESTED_PROMPTS: { title: MessageKey; prompt: MessageKey }[] = [
+  { title: "chat.p1Title", prompt: "chat.p1Prompt" },
+  { title: "chat.p2Title", prompt: "chat.p2Prompt" },
+  { title: "chat.p3Title", prompt: "chat.p3Prompt" },
+  { title: "chat.p4Title", prompt: "chat.p4Prompt" },
+  { title: "chat.p5Title", prompt: "chat.p5Prompt" },
+  { title: "chat.p6Title", prompt: "chat.p6Prompt" },
 ];

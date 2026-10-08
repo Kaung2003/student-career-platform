@@ -10,13 +10,14 @@ import { Avatar } from "../../components/ui/Avatar";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { Skeleton } from "../../components/ui/Skeleton";
 import { CheckIcon, InboxIcon, TrashIcon } from "../../components/icons";
-import { FEEDBACK_STATUS, FEEDBACK_TYPE } from "./adminLabels";
-
-const STATUSES = Object.keys(FEEDBACK_STATUS) as FeedbackStatus[];
-const TYPES = Object.keys(FEEDBACK_TYPE) as FeedbackType[];
+import { FEEDBACK_STATUSES as STATUSES, FEEDBACK_STATUS_TONE, FEEDBACK_TYPES as TYPES, FEEDBACK_TYPE_TONE } from "./adminLabels";
+import { useI18n } from "../../i18n/I18nContext";
 
 export function AdminFeedback() {
   const { toast, confirm } = useUi();
+  const { t, locale } = useI18n();
+  const statusLabel = (s: FeedbackStatus) => t(`admin.feedbackStatus.${s}`);
+  const typeLabel = (ty: FeedbackType) => t(`admin.feedbackType.${ty}`);
   const [items, setItems] = useState<Feedback[]>([]);
   const [counts, setCounts] = useState<Partial<Record<FeedbackStatus, number>>>({});
   const [loading, setLoading] = useState(true);
@@ -45,22 +46,22 @@ export function AdminFeedback() {
   async function setItemStatus(item: Feedback, next: FeedbackStatus) {
     try {
       await api.patch(`/admin/feedback/${item.id}`, { status: next });
-      toast(`Marked as ${FEEDBACK_STATUS[next].label.toLowerCase()}`);
+      toast(t("admin.feedback.markedAs", { status: statusLabel(next) }));
       await load();
     } catch (err) {
-      toast(err instanceof ApiError ? err.message : "Update failed", "error");
+      toast(err instanceof ApiError ? err.message : t("admin.users.updateFailed"), "error");
     }
   }
 
   async function remove(item: Feedback) {
-    const ok = await confirm({ title: "Delete this feedback?", confirmLabel: "Delete", danger: true });
+    const ok = await confirm({ title: t("admin.feedback.deleteTitle"), confirmLabel: t("common.delete"), danger: true });
     if (!ok) return;
     try {
       await api.delete(`/admin/feedback/${item.id}`);
-      toast("Feedback deleted");
+      toast(t("admin.feedback.deleted"));
       await load();
     } catch (err) {
-      toast(err instanceof ApiError ? err.message : "Delete failed", "error");
+      toast(err instanceof ApiError ? err.message : t("admin.users.deleteFailed"), "error");
     }
   }
 
@@ -68,7 +69,7 @@ export function AdminFeedback() {
 
   return (
     <div>
-      <PageHeader title="Feedback inbox" description="Bug reports, feature ideas, and comments from your users." />
+      <PageHeader title={t("admin.feedback.title")} description={t("admin.feedback.description")} />
 
       <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="inline-flex flex-wrap gap-1 rounded-xl bg-slate-100 p-1 dark:bg-slate-900">
@@ -82,7 +83,7 @@ export function AdminFeedback() {
                   : "text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
               }`}
             >
-              {s ? FEEDBACK_STATUS[s].label : "All"}{" "}
+              {s ? statusLabel(s) : t("admin.feedback.all")}{" "}
               <span className="tabular-nums text-slate-400">{s ? (counts[s] ?? 0) : total}</span>
             </button>
           ))}
@@ -90,13 +91,13 @@ export function AdminFeedback() {
         <select
           value={type}
           onChange={(e) => setType(e.target.value as FeedbackType | "")}
-          aria-label="Filter by type"
+          aria-label={t("admin.feedback.filterType")}
           className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
         >
-          <option value="">All types</option>
-          {TYPES.map((t) => (
-            <option key={t} value={t}>
-              {FEEDBACK_TYPE[t].label}
+          <option value="">{t("admin.feedback.allTypes")}</option>
+          {TYPES.map((ty) => (
+            <option key={ty} value={ty}>
+              {typeLabel(ty)}
             </option>
           ))}
         </select>
@@ -111,17 +112,17 @@ export function AdminFeedback() {
       ) : items.length === 0 ? (
         <EmptyState
           icon={<InboxIcon className="h-6 w-6" />}
-          title={status === "NEW" ? "Inbox zero 🎉" : "Nothing here"}
-          description={status === "NEW" ? "No new feedback right now." : "No feedback matches these filters."}
+          title={status === "NEW" ? t("admin.feedback.inboxZeroTitle") : t("admin.feedback.nothingTitle")}
+          description={status === "NEW" ? t("admin.feedback.inboxZeroDescription") : t("admin.feedback.nothingDescription")}
         />
       ) : (
         <div className="space-y-3">
           {items.map((item) => (
             <Card key={item.id}>
               <div className="flex flex-wrap items-center gap-2">
-                <Badge tone={FEEDBACK_TYPE[item.type].tone}>{FEEDBACK_TYPE[item.type].label}</Badge>
-                <Badge tone={FEEDBACK_STATUS[item.status].tone}>{FEEDBACK_STATUS[item.status].label}</Badge>
-                <span className="ml-auto text-xs text-slate-400">{new Date(item.createdAt).toLocaleString()}</span>
+                <Badge tone={FEEDBACK_TYPE_TONE[item.type]}>{typeLabel(item.type)}</Badge>
+                <Badge tone={FEEDBACK_STATUS_TONE[item.status]}>{statusLabel(item.status)}</Badge>
+                <span className="ml-auto text-xs text-slate-400">{new Date(item.createdAt).toLocaleString(locale)}</span>
               </div>
               <p className="mt-3 whitespace-pre-line text-sm leading-relaxed text-slate-800 dark:text-slate-200">{item.message}</p>
               <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-4 dark:border-slate-800">
@@ -139,19 +140,19 @@ export function AdminFeedback() {
                 <div className="flex flex-wrap gap-2">
                   {item.status === "NEW" && (
                     <Button size="sm" variant="secondary" onClick={() => void setItemStatus(item, "IN_PROGRESS")}>
-                      Start working
+                      {t("admin.feedback.startWorking")}
                     </Button>
                   )}
                   {item.status !== "RESOLVED" ? (
                     <Button size="sm" onClick={() => void setItemStatus(item, "RESOLVED")}>
-                      <CheckIcon className="h-3.5 w-3.5" /> Resolve
+                      <CheckIcon className="h-3.5 w-3.5" /> {t("admin.feedback.resolve")}
                     </Button>
                   ) : (
                     <Button size="sm" variant="secondary" onClick={() => void setItemStatus(item, "NEW")}>
-                      Reopen
+                      {t("admin.feedback.reopen")}
                     </Button>
                   )}
-                  <Button size="sm" variant="ghost" onClick={() => void remove(item)} aria-label="Delete feedback">
+                  <Button size="sm" variant="ghost" onClick={() => void remove(item)} aria-label={t("admin.feedback.deleteLabel")}>
                     <TrashIcon className="h-3.5 w-3.5" />
                   </Button>
                 </div>

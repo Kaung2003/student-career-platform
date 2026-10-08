@@ -1,6 +1,7 @@
 import { useEffect, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { XIcon } from "../icons";
+import { useI18n } from "../../i18n/I18nContext";
 
 export function Modal({
   open,
@@ -19,6 +20,8 @@ export function Modal({
   footer?: ReactNode;
   size?: "sm" | "md" | "lg";
 }) {
+  const { t } = useI18n();
+
   useEffect(() => {
     if (!open) return;
     function onKey(e: KeyboardEvent) {
@@ -53,7 +56,7 @@ export function Modal({
           </div>
           <button
             onClick={onClose}
-            aria-label="Close"
+            aria-label={t("common.close")}
             className="-mr-1 rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-200"
           >
             <XIcon className="h-5 w-5" />

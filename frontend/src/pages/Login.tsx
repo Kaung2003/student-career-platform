@@ -1,6 +1,7 @@
 import { useState, type SubmitEvent } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { useI18n } from "../i18n/I18nContext";
 import { ApiError } from "../lib/api";
 import { AuthLayout } from "../components/AuthLayout";
 import { Field, inputClass } from "../components/ui/Field";
@@ -9,6 +10,7 @@ import { Button } from "../components/ui/Button";
 export function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
+  const { t } = useI18n();
   const location = useLocation();
   const redirectTo = (location.state as { from?: string } | null)?.from ?? "/dashboard";
   const [email, setEmail] = useState("");
@@ -25,28 +27,28 @@ export function Login() {
       await login(email, password);
       navigate(redirectTo, { replace: true });
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Failed to log in");
+      setError(err instanceof ApiError ? err.message : t("auth.loginFailed"));
     } finally {
       setSubmitting(false);
     }
   }
 
   return (
-    <AuthLayout title="Welcome back" subtitle="Log in to manage your portfolio and keep practicing.">
+    <AuthLayout title={t("auth.loginTitle")} subtitle={t("auth.loginSubtitle")}>
       <form onSubmit={handleSubmit} className="space-y-4">
-        <Field label="Email">
+        <Field label={t("auth.email")}>
           <input
             type="email"
             required
             autoComplete="email"
-            placeholder="you@school.edu"
+            placeholder={t("auth.emailPlaceholder")}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             className={inputClass}
           />
         </Field>
 
-        <Field label="Password">
+        <Field label={t("auth.password")}>
           <input
             type="password"
             required
@@ -60,14 +62,14 @@ export function Login() {
         {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
 
         <Button type="submit" disabled={submitting} className="w-full py-2.5">
-          {submitting ? "Logging in..." : "Log in"}
+          {submitting ? t("auth.loggingIn") : t("common.logIn")}
         </Button>
       </form>
 
       <p className="mt-6 text-center text-sm text-slate-500 dark:text-slate-400">
-        No account?{" "}
+        {t("auth.noAccount")}{" "}
         <Link to="/register" className="font-medium text-blue-600 hover:underline dark:text-blue-400">
-          Register
+          {t("auth.register")}
         </Link>
       </p>
     </AuthLayout>

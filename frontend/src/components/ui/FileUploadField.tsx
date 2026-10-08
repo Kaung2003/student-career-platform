@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { api, ApiError } from "../../lib/api";
 import { inputClass } from "./Field";
+import { useI18n } from "../../i18n/I18nContext";
 
 type UploadType = "resume" | "transcript" | "project-image";
 
@@ -17,6 +18,7 @@ export function FileUploadField({
   placeholder?: string;
   accept?: string;
 }) {
+  const { t } = useI18n();
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
@@ -31,7 +33,7 @@ export function FileUploadField({
       const res = await api.upload<{ url: string }>("/uploads", formData);
       onChange(res.url);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Upload failed");
+      setError(err instanceof ApiError ? err.message : t("common.uploadFailed"));
     } finally {
       setUploading(false);
       if (fileInput.current) fileInput.current.value = "";
@@ -54,7 +56,7 @@ export function FileUploadField({
           disabled={uploading}
           className="shrink-0 rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
         >
-          {uploading ? "Uploading..." : "Upload"}
+          {uploading ? t("common.uploading") : t("common.upload")}
         </button>
         <input
           ref={fileInput}

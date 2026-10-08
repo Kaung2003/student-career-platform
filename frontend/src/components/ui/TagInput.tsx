@@ -1,5 +1,6 @@
 import { useState, type KeyboardEvent } from "react";
 import { XIcon } from "../icons";
+import { useI18n } from "../../i18n/I18nContext";
 
 export function TagInput({
   value,
@@ -12,6 +13,7 @@ export function TagInput({
   placeholder?: string;
   suggestions?: string[];
 }) {
+  const { t } = useI18n();
   const [draft, setDraft] = useState("");
 
   function add(raw: string) {
@@ -55,7 +57,7 @@ export function TagInput({
             <button
               type="button"
               onClick={() => onChange(value.filter((t) => t !== tag))}
-              aria-label={`Remove ${tag}`}
+              aria-label={t("common.removeItem", { item: tag })}
               className="rounded p-0.5 hover:bg-blue-100 dark:hover:bg-blue-500/20"
             >
               <XIcon className="h-3 w-3" strokeWidth={2.5} />
@@ -68,13 +70,13 @@ export function TagInput({
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={handleKeyDown}
           onBlur={() => add(draft)}
-          placeholder={value.length === 0 ? placeholder : "Add more..."}
+          placeholder={value.length === 0 ? placeholder : t("common.addMore")}
           className="min-w-[8rem] flex-1 bg-transparent px-1 py-0.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none dark:text-slate-100 dark:placeholder:text-slate-500"
         />
       </div>
       {available.length > 0 && (
         <div className="mt-2 flex flex-wrap items-center gap-1.5">
-          <span className="text-xs text-slate-400 dark:text-slate-500">Suggestions:</span>
+          <span className="text-xs text-slate-400 dark:text-slate-500">{t("common.suggestions")}</span>
           {available.map((s) => (
             <button
               key={s}

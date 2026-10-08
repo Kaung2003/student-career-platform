@@ -10,13 +10,14 @@ import { EmptyState } from "../../components/ui/EmptyState";
 import { Skeleton } from "../../components/ui/Skeleton";
 import { inputClass } from "../../components/ui/Field";
 import { BanIcon, CheckIcon, ExternalLinkIcon, SearchIcon, TrashIcon, UsersIcon } from "../../components/icons";
-import { ROLE_LABEL } from "./adminLabels";
-
-const ROLES = Object.keys(ROLE_LABEL) as Role[];
+import { ROLES } from "./adminLabels";
+import { useI18n } from "../../i18n/I18nContext";
 
 export function AdminUsers() {
   const { user: me } = useAuth();
   const { toast, confirm } = useUi();
+  const { t, formatDate } = useI18n();
+  const roleLabel = (r: Role) => t(`admin.role.${r}`);
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
@@ -47,49 +48,49 @@ export function AdminUsers() {
       setUsers((list) => list.map((u) => (u.id === target.id ? { ...u, ...data } : u)));
       toast(message);
     } catch (err) {
-      toast(err instanceof ApiError ? err.message : "Update failed", "error");
+      toast(err instanceof ApiError ? err.message : t("admin.users.updateFailed"), "error");
     }
   }
 
   async function changeRole(target: AdminUser, newRole: Role) {
     if (newRole === "ADMIN") {
       const ok = await confirm({
-        title: `Make ${target.name} an admin?`,
-        message: "Admins can manage every user, read all feedback, and moderate content.",
-        confirmLabel: "Make admin",
+        title: t("admin.users.makeAdminTitle", { name: target.name }),
+        message: t("admin.users.makeAdminMessage"),
+        confirmLabel: t("admin.users.makeAdmin"),
       });
       if (!ok) return;
     }
-    await update(target, { role: newRole }, `${target.name} is now ${ROLE_LABEL[newRole].toLowerCase()}`);
+    await update(target, { role: newRole }, t("admin.users.roleChanged", { name: target.name, role: roleLabel(newRole) }));
   }
 
   async function toggleSuspend(target: AdminUser) {
     if (!target.suspended) {
       const ok = await confirm({
-        title: `Suspend ${target.name}?`,
-        message: "They'll be signed out and won't be able to log in until you reactivate the account. Their data is kept.",
-        confirmLabel: "Suspend",
+        title: t("admin.users.suspendTitle", { name: target.name }),
+        message: t("admin.users.suspendMessage"),
+        confirmLabel: t("admin.users.suspend"),
         danger: true,
       });
       if (!ok) return;
     }
-    await update(target, { suspended: !target.suspended }, target.suspended ? `${target.name} reactivated` : `${target.name} suspended`);
+    await update(target, { suspended: !target.suspended }, target.suspended ? t("admin.users.reactivated", { name: target.name }) : t("admin.users.suspendedToast", { name: target.name }));
   }
 
   async function remove(target: AdminUser) {
     const ok = await confirm({
-      title: `Delete ${target.name}?`,
-      message: "This permanently deletes the account with its profile, projects, certifications, practice history, and comments.",
-      confirmLabel: "Delete permanently",
+      title: t("admin.users.deleteTitle", { name: target.name }),
+      message: t("admin.users.deleteMessage"),
+      confirmLabel: t("admin.users.deletePermanently"),
       danger: true,
     });
     if (!ok) return;
     try {
       await api.delete(`/admin/users/${target.id}`);
       setUsers((list) => list.filter((u) => u.id !== target.id));
-      toast("User deleted");
+      toast(t("admin.users.deleted"));
     } catch (err) {
-      toast(err instanceof ApiError ? err.message : "Delete failed", "error");
+      toast(err instanceof ApiError ? err.message : t("admin.users.deleteFailed"), "error");
     }
   }
 
@@ -98,24 +99,24 @@ export function AdminUsers() {
 
   return (
     <div>
-      <PageHeader title="Users" description="Search members, change roles, and suspend or remove accounts." />
+      <PageHeader title={t("admin.users.title")} description={t("admin.users.description")} />
 
       <div className="mb-5 flex flex-col gap-3 sm:flex-row">
         <div className="relative flex-1">
           <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
           <input
             type="search"
-            placeholder="Search by name or email..."
+            placeholder={t("admin.users.searchPlaceholder")}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             className={`${inputClass} pl-9`}
           />
         </div>
-        <select value={role} onChange={(e) => setRole(e.target.value as Role | "")} className={selectClass} aria-label="Filter by role">
-          <option value="">All roles</option>
+        <select value={role} onChange={(e) => setRole(e.target.value as Role | "")} className={selectClass} aria-label={t("admin.users.filterRole")}>
+          <option value="">{t("admin.users.allRoles")}</option>
           {ROLES.map((r) => (
             <option key={r} value={r}>
-              {ROLE_LABEL[r]}
+              {roleLabel(r)}
             </option>
           ))}
         </select>
@@ -123,31 +124,31 @@ export function AdminUsers() {
           value={status}
           onChange={(e) => setStatus(e.target.value as typeof status)}
           className={selectClass}
-          aria-label="Filter by status"
+          aria-label={t("admin.users.filterStatus")}
         >
-          <option value="">All statuses</option>
-          <option value="active">Active</option>
-          <option value="suspended">Suspended</option>
+          <option value="">{t("admin.users.allStatuses")}</option>
+          <option value="active">{t("admin.users.active")}</option>
+          <option value="suspended">{t("admin.users.suspended")}</option>
         </select>
       </div>
 
       {loading ? (
         <Skeleton className="h-96" />
       ) : users.length === 0 ? (
-        <EmptyState icon={<UsersIcon className="h-6 w-6" />} title="No users found" description="Try a different search or filter." />
+        <EmptyState icon={<UsersIcon className="h-6 w-6" />} title={t("admin.users.emptyTitle")} description={t("admin.users.emptyDescription")} />
       ) : (
         <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
           <div className="overflow-x-auto">
             <table className="w-full min-w-[760px] text-sm">
               <thead className="border-b border-slate-200 bg-slate-50 text-left text-xs font-medium uppercase tracking-wider text-slate-500 dark:border-slate-800 dark:bg-slate-800/50 dark:text-slate-400">
                 <tr>
-                  <th className="px-5 py-3">User</th>
-                  <th className="px-3 py-3">Role</th>
-                  <th className="px-3 py-3">Status</th>
-                  <th className="px-3 py-3 text-right">Projects</th>
-                  <th className="px-3 py-3 text-right">Practice</th>
-                  <th className="px-3 py-3">Joined</th>
-                  <th className="px-5 py-3 text-right">Actions</th>
+                  <th className="px-5 py-3">{t("admin.users.colUser")}</th>
+                  <th className="px-3 py-3">{t("admin.users.colRole")}</th>
+                  <th className="px-3 py-3">{t("admin.users.colStatus")}</th>
+                  <th className="px-3 py-3 text-right">{t("admin.users.colProjects")}</th>
+                  <th className="px-3 py-3 text-right">{t("admin.users.colPractice")}</th>
+                  <th className="px-3 py-3">{t("admin.users.colJoined")}</th>
+                  <th className="px-5 py-3 text-right">{t("admin.users.colActions")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -160,7 +161,7 @@ export function AdminUsers() {
                           <Avatar name={u.name} size="sm" />
                           <div className="min-w-0">
                             <p className="truncate font-medium text-slate-900 dark:text-white">
-                              {u.name} {isMe && <span className="text-xs font-normal text-slate-400">(you)</span>}
+                              {u.name} {isMe && <span className="text-xs font-normal text-slate-400">{t("admin.users.you")}</span>}
                             </p>
                             <p className="truncate text-xs text-slate-500 dark:text-slate-400">{u.email}</p>
                           </div>
@@ -171,22 +172,22 @@ export function AdminUsers() {
                           value={u.role}
                           disabled={isMe}
                           onChange={(e) => void changeRole(u, e.target.value as Role)}
-                          aria-label={`Role for ${u.name}`}
+                          aria-label={t("admin.users.roleFor", { name: u.name })}
                           className="rounded-md border border-slate-200 bg-white py-1 pl-2 pr-7 text-xs font-medium text-slate-700 disabled:opacity-60 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
                         >
                           {ROLES.map((r) => (
                             <option key={r} value={r}>
-                              {ROLE_LABEL[r]}
+                              {roleLabel(r)}
                             </option>
                           ))}
                         </select>
                       </td>
                       <td className="px-3 py-3">
-                        {u.suspended ? <Badge tone="red">Suspended</Badge> : <Badge tone="green">Active</Badge>}
+                        {u.suspended ? <Badge tone="red">{t("admin.users.suspended")}</Badge> : <Badge tone="green">{t("admin.users.active")}</Badge>}
                       </td>
                       <td className="px-3 py-3 text-right tabular-nums text-slate-700 dark:text-slate-300">{u.projects}</td>
                       <td className="px-3 py-3 text-right tabular-nums text-slate-700 dark:text-slate-300">{u.attempts}</td>
-                      <td className="px-3 py-3 text-xs text-slate-500 dark:text-slate-400">{new Date(u.createdAt).toLocaleDateString()}</td>
+                      <td className="px-3 py-3 text-xs text-slate-500 dark:text-slate-400">{formatDate(u.createdAt)}</td>
                       <td className="px-5 py-3">
                         <div className="flex justify-end gap-1">
                           {u.slug && (
@@ -194,7 +195,7 @@ export function AdminUsers() {
                               href={`/p/${u.slug}`}
                               target="_blank"
                               rel="noreferrer"
-                              title="View portfolio"
+                              title={t("admin.users.viewPortfolio")}
                               className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200"
                             >
                               <ExternalLinkIcon className="h-4 w-4" />
@@ -204,7 +205,7 @@ export function AdminUsers() {
                             <>
                               <button
                                 onClick={() => void toggleSuspend(u)}
-                                title={u.suspended ? "Reactivate" : "Suspend"}
+                                title={u.suspended ? t("admin.users.reactivate") : t("admin.users.suspend")}
                                 className={`rounded-lg p-1.5 ${
                                   u.suspended
                                     ? "text-emerald-600 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-500/10"
@@ -215,7 +216,7 @@ export function AdminUsers() {
                               </button>
                               <button
                                 onClick={() => void remove(u)}
-                                title="Delete user"
+                                title={t("admin.users.deleteUser")}
                                 className="rounded-lg p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10 dark:hover:text-red-400"
                               >
                                 <TrashIcon className="h-4 w-4" />
@@ -231,7 +232,7 @@ export function AdminUsers() {
             </table>
           </div>
           <p className="border-t border-slate-100 px-5 py-3 text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">
-            Showing {users.length} user{users.length === 1 ? "" : "s"}
+            {t("admin.users.showing", { count: users.length })}
           </p>
         </div>
       )}

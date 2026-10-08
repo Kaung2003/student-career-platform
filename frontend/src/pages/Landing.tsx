@@ -4,16 +4,19 @@ import { Navbar } from "../components/Navbar";
 import { Footer } from "../components/Footer";
 import { IconChip } from "../components/ui/IconChip";
 import { useAuth } from "../context/AuthContext";
+import { useI18n } from "../i18n/I18nContext";
+import type { MessageKey } from "../i18n/locales/en";
+import { formatNodes } from "../i18n/formatNodes";
 
-const features: { title: string; description: string; icon: ReactNode }[] = [
+const features: { title: MessageKey; description: MessageKey; icon: ReactNode }[] = [
   {
-    title: "Public portfolio",
-    description: "Get a clean, shareable page with your bio, skills, projects, resume, and links — ready for any application.",
+    title: "landing.f1Title",
+    description: "landing.f1Desc",
     icon: <path strokeLinecap="round" strokeLinejoin="round" d="M10 13a5 5 0 007.07 0l2-2a5 5 0 00-7.07-7.07l-1 1M14 11a5 5 0 00-7.07 0l-2 2a5 5 0 007.07 7.07l1-1" />,
   },
   {
-    title: "Project showcase",
-    description: "Document what you've built with tech stacks, screenshots, live demos, and GitHub links.",
+    title: "landing.f2Title",
+    description: "landing.f2Desc",
     icon: (
       <>
         <rect x="3" y="4" width="18" height="14" rx="2" />
@@ -22,8 +25,8 @@ const features: { title: string; description: string; icon: ReactNode }[] = [
     ),
   },
   {
-    title: "Certification tracker",
-    description: "Plan exams, track progress, and keep resources in one place from first study session to pass.",
+    title: "landing.f3Title",
+    description: "landing.f3Desc",
     icon: (
       <>
         <circle cx="12" cy="9" r="5" />
@@ -32,8 +35,8 @@ const features: { title: string; description: string; icon: ReactNode }[] = [
     ),
   },
   {
-    title: "AI interview practice",
-    description: "Answer behavioral, technical, and situational questions and get instant, specific feedback.",
+    title: "landing.f4Title",
+    description: "landing.f4Desc",
     icon: (
       <path
         strokeLinecap="round"
@@ -43,13 +46,13 @@ const features: { title: string; description: string; icon: ReactNode }[] = [
     ),
   },
   {
-    title: "Career assistant",
-    description: "Ask the built-in assistant for help with your resume, project write-ups, or next steps.",
+    title: "landing.f5Title",
+    description: "landing.f5Desc",
     icon: <path strokeLinecap="round" strokeLinejoin="round" d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3zM19 15l.9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9L19 15z" />,
   },
   {
-    title: "Student directory",
-    description: "Discover classmates by school or skill, explore their work, and leave encouraging comments.",
+    title: "landing.f6Title",
+    description: "landing.f6Desc",
     icon: (
       <>
         <circle cx="11" cy="11" r="7" />
@@ -59,14 +62,15 @@ const features: { title: string; description: string; icon: ReactNode }[] = [
   },
 ];
 
-const steps = [
-  { title: "Create your account", description: "Sign up in seconds — your portfolio page is created automatically." },
-  { title: "Add your work", description: "Fill in your profile, upload your resume, and add projects and certifications." },
-  { title: "Share and practice", description: "Send your portfolio link to recruiters and sharpen your interview answers." },
+const steps: { title: MessageKey; description: MessageKey }[] = [
+  { title: "landing.s1Title", description: "landing.s1Desc" },
+  { title: "landing.s2Title", description: "landing.s2Desc" },
+  { title: "landing.s3Title", description: "landing.s3Desc" },
 ];
 
 export function Landing() {
   const { user } = useAuth();
+  const { t } = useI18n();
 
   return (
     <div className="min-h-screen bg-white dark:bg-slate-950">
@@ -77,14 +81,15 @@ export function Landing() {
         <div className="relative mx-auto max-w-6xl px-4 pb-20 pt-20 text-center sm:px-6 sm:pt-28">
           <span className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-300">
             <span className="h-1.5 w-1.5 rounded-full bg-blue-600 dark:bg-blue-400" />
-            Built for students and new graduates
+            {t("landing.badge")}
           </span>
           <h1 className="mx-auto mt-6 max-w-3xl text-4xl font-semibold tracking-tight text-slate-900 sm:text-6xl dark:text-white">
-            Launch your career with a portfolio that <span className="text-blue-600 dark:text-blue-400">stands out</span>
+            {formatNodes(t("landing.title"), {
+              highlight: <span className="text-blue-600 dark:text-blue-400">{t("landing.titleHighlight")}</span>,
+            })}
           </h1>
           <p className="mx-auto mt-6 max-w-2xl text-lg text-slate-600 dark:text-slate-400">
-            Showcase your projects, track certifications, and practice interviews with AI feedback — all in one
-            professional platform.
+            {t("landing.subtitle")}
           </p>
           <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
             {user ? (
@@ -92,21 +97,21 @@ export function Landing() {
                 to="/dashboard"
                 className="w-full rounded-lg bg-blue-600 px-6 py-3 text-sm font-semibold text-white shadow-sm shadow-blue-600/30 transition hover:bg-blue-700 sm:w-auto"
               >
-                Go to your dashboard
+                {t("landing.goDashboard")}
               </Link>
             ) : (
               <Link
                 to="/register"
                 className="w-full rounded-lg bg-blue-600 px-6 py-3 text-sm font-semibold text-white shadow-sm shadow-blue-600/30 transition hover:bg-blue-700 sm:w-auto"
               >
-                Get started — it's free
+                {t("landing.getStarted")}
               </Link>
             )}
             <Link
               to="/directory"
               className="w-full rounded-lg border border-slate-300 bg-white px-6 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 sm:w-auto dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
             >
-              Browse student portfolios
+              {t("landing.browse")}
             </Link>
           </div>
         </div>
@@ -115,12 +120,12 @@ export function Landing() {
       <section className="border-t border-slate-100 bg-slate-50 py-20 dark:border-slate-900 dark:bg-slate-900/40">
         <div className="mx-auto max-w-6xl px-4 sm:px-6">
           <div className="mx-auto max-w-2xl text-center">
-            <p className="text-sm font-semibold uppercase tracking-wider text-blue-600 dark:text-blue-400">Features</p>
+            <p className="text-sm font-semibold uppercase tracking-wider text-blue-600 dark:text-blue-400">{t("landing.featuresEyebrow")}</p>
             <h2 className="mt-2 text-3xl font-semibold tracking-tight text-slate-900 dark:text-white">
-              Everything you need to get job-ready
+              {t("landing.featuresTitle")}
             </h2>
             <p className="mt-4 text-slate-600 dark:text-slate-400">
-              One place to present your work, prove your skills, and prepare for the conversation.
+              {t("landing.featuresSubtitle")}
             </p>
           </div>
 
@@ -135,8 +140,8 @@ export function Landing() {
                     {feature.icon}
                   </svg>
                 </IconChip>
-                <h3 className="mt-4 font-semibold text-slate-900 dark:text-slate-100">{feature.title}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-slate-600 dark:text-slate-400">{feature.description}</p>
+                <h3 className="mt-4 font-semibold text-slate-900 dark:text-slate-100">{t(feature.title)}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-slate-600 dark:text-slate-400">{t(feature.description)}</p>
               </div>
             ))}
           </div>
@@ -146,9 +151,9 @@ export function Landing() {
       <section className="py-20">
         <div className="mx-auto max-w-6xl px-4 sm:px-6">
           <div className="mx-auto max-w-2xl text-center">
-            <p className="text-sm font-semibold uppercase tracking-wider text-blue-600 dark:text-blue-400">How it works</p>
+            <p className="text-sm font-semibold uppercase tracking-wider text-blue-600 dark:text-blue-400">{t("landing.howEyebrow")}</p>
             <h2 className="mt-2 text-3xl font-semibold tracking-tight text-slate-900 dark:text-white">
-              From sign-up to shareable in minutes
+              {t("landing.howTitle")}
             </h2>
           </div>
           <ol className="mt-14 grid gap-8 md:grid-cols-3">
@@ -157,8 +162,8 @@ export function Landing() {
                 <span className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-blue-600 text-sm font-semibold text-white md:mx-0">
                   {i + 1}
                 </span>
-                <h3 className="mt-4 font-semibold text-slate-900 dark:text-slate-100">{step.title}</h3>
-                <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">{step.description}</p>
+                <h3 className="mt-4 font-semibold text-slate-900 dark:text-slate-100">{t(step.title)}</h3>
+                <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">{t(step.description)}</p>
               </li>
             ))}
           </ol>
@@ -169,15 +174,15 @@ export function Landing() {
         <div className="relative mx-auto max-w-6xl overflow-hidden rounded-3xl bg-slate-900 px-6 py-16 text-center sm:px-12 dark:bg-slate-900 dark:ring-1 dark:ring-slate-800">
           <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-blue-600/40 blur-3xl" />
           <div className="pointer-events-none absolute -bottom-24 -left-24 h-72 w-72 rounded-full bg-indigo-500/30 blur-3xl" />
-          <h2 className="relative text-3xl font-semibold tracking-tight text-white">Ready to put your best work forward?</h2>
+          <h2 className="relative text-3xl font-semibold tracking-tight text-white">{t("landing.ctaTitle")}</h2>
           <p className="relative mx-auto mt-4 max-w-xl text-slate-300">
-            Join students building portfolios that recruiters actually read.
+            {t("landing.ctaSubtitle")}
           </p>
           <Link
             to={user ? "/dashboard" : "/register"}
             className="relative mt-8 inline-block rounded-lg bg-white px-6 py-3 text-sm font-semibold text-slate-900 transition hover:bg-slate-100"
           >
-            {user ? "Open dashboard" : "Create your free account"}
+            {user ? t("landing.ctaOpen") : t("landing.ctaCreate")}
           </Link>
         </div>
       </section>

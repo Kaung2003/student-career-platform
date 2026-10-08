@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { SUGGESTED_PROMPTS, useChat, type ChatMessage } from "../../context/ChatContext";
 import { useAuth } from "../../context/AuthContext";
+import { useI18n } from "../../i18n/I18nContext";
 import { Markdown } from "../ui/Markdown";
 import { Avatar } from "../ui/Avatar";
 import { CheckIcon, CopyIcon, RefreshIcon, SendIcon, SparklesIcon } from "../icons";
@@ -18,6 +19,7 @@ function AssistantAvatar({ small }: { small?: boolean }) {
 }
 
 function CopyButton({ text }: { text: string }) {
+  const { t } = useI18n();
   const [copied, setCopied] = useState(false);
   return (
     <button
@@ -30,7 +32,7 @@ function CopyButton({ text }: { text: string }) {
       className="inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-xs text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-300"
     >
       {copied ? <CheckIcon className="h-3.5 w-3.5" /> : <CopyIcon className="h-3.5 w-3.5" />}
-      {copied ? "Copied" : "Copy"}
+      {copied ? t("common.copied") : t("common.copy")}
     </button>
   );
 }
@@ -89,6 +91,7 @@ function TypingIndicator({ compact }: { compact: boolean }) {
 
 export function ChatComposer({ compact = false, autoFocus = false }: { compact?: boolean; autoFocus?: boolean }) {
   const { send, sending, configured } = useChat();
+  const { t } = useI18n();
   const [input, setInput] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -129,13 +132,13 @@ export function ChatComposer({ compact = false, autoFocus = false }: { compact?:
           disabled={disabled}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={onKeyDown}
-          placeholder={disabled ? "Assistant unavailable" : "Ask anything about your career..."}
+          placeholder={disabled ? t("chat.placeholderDisabled") : t("chat.placeholder")}
           className="max-h-[180px] flex-1 resize-none bg-transparent px-2 py-1.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none disabled:cursor-not-allowed dark:text-slate-100 dark:placeholder:text-slate-500"
         />
         <button
           onClick={submit}
           disabled={disabled || sending || !input.trim()}
-          aria-label="Send message"
+          aria-label={t("chat.send")}
           className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white transition hover:bg-blue-700 disabled:bg-slate-300 dark:disabled:bg-slate-700"
         >
           <SendIcon className="h-4 w-4" />
@@ -143,7 +146,7 @@ export function ChatComposer({ compact = false, autoFocus = false }: { compact?:
       </div>
       {!compact && (
         <p className="mt-2 text-center text-xs text-slate-400 dark:text-slate-500">
-          Enter to send · Shift + Enter for a new line · AI can make mistakes, so double-check important details.
+          {t("chat.hint")}
         </p>
       )}
     </div>
@@ -153,6 +156,7 @@ export function ChatComposer({ compact = false, autoFocus = false }: { compact?:
 export function ChatThread({ compact = false }: { compact?: boolean }) {
   const { active, sending, error, configured, send, retry } = useChat();
   const { user } = useAuth();
+  const { t } = useI18n();
   const scrollRef = useRef<HTMLDivElement>(null);
   const messages = active?.messages ?? [];
 
@@ -165,9 +169,9 @@ export function ChatThread({ compact = false }: { compact?: boolean }) {
       <div className="flex flex-1 items-center justify-center p-8 text-center">
         <div>
           <AssistantAvatar />
-          <p className="mt-3 font-medium text-slate-900 dark:text-slate-100">Assistant not available</p>
+          <p className="mt-3 font-medium text-slate-900 dark:text-slate-100">{t("chat.unavailableTitle")}</p>
           <p className="mt-1 max-w-xs text-sm text-slate-500 dark:text-slate-400">
-            The AI assistant hasn't been configured on the server yet. Ask the site admin to add a Gemini API key.
+            {t("chat.unavailableDescription")}
           </p>
         </div>
       </div>
@@ -187,20 +191,20 @@ export function ChatThread({ compact = false }: { compact?: boolean }) {
               </div>
             )}
             <h2 className={`font-semibold text-slate-900 dark:text-slate-100 ${compact ? "text-base" : "text-2xl tracking-tight"}`}>
-              Hi {user?.name.split(" ")[0]}, how can I help?
+              {t("chat.greeting", { name: user?.name.split(" ")[0] ?? "" })}
             </h2>
             <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-              I know your profile, projects, and certifications — ask me anything about your career.
+              {t("chat.intro")}
             </p>
             <div className={`mt-6 grid gap-2 text-left ${compact ? "" : "sm:grid-cols-2 lg:grid-cols-3"}`}>
               {prompts.map((p) => (
                 <button
                   key={p.title}
-                  onClick={() => void send(p.prompt)}
+                  onClick={() => void send(t(p.prompt))}
                   className="rounded-xl border border-slate-200 bg-white p-3 text-left transition hover:border-blue-400 hover:shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:hover:border-blue-500"
                 >
-                  <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{p.title}</p>
-                  {!compact && <p className="mt-1 line-clamp-2 text-xs text-slate-500 dark:text-slate-400">{p.prompt}</p>}
+                  <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{t(p.title)}</p>
+                  {!compact && <p className="mt-1 line-clamp-2 text-xs text-slate-500 dark:text-slate-400">{t(p.prompt)}</p>}
                 </button>
               ))}
             </div>
@@ -220,7 +224,7 @@ export function ChatThread({ compact = false }: { compact?: boolean }) {
               onClick={() => void retry()}
               className="inline-flex shrink-0 items-center gap-1 font-medium hover:underline"
             >
-              <RefreshIcon className="h-3.5 w-3.5" /> Retry
+              <RefreshIcon className="h-3.5 w-3.5" /> {t("common.retry")}
             </button>
           </div>
         )}

@@ -3,7 +3,8 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme {
-  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-sans: "Inter", "Noto Sans Myanmar", "Hiragino Sans", "Yu Gothic UI", "PingFang SC", "Microsoft YaHei",
+    ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 
 html {
@@ -41,4 +42,29 @@ body {
 
 @utility animate-bounce-dot {
   animation: bounce-dot 1.2s infinite ease-in-out;
+}
+
+/* Burmese script needs extra vertical room for stacked vowels and medials. */
+:lang(my) body {
+  line-height: 1.75;
+}
+
+:lang(my) h1,
+:lang(my) h2,
+:lang(my) h3 {
+  line-height: 1.6;
+}
+
+/* Even out heading line lengths, and break Japanese at phrase boundaries instead of mid-word. */
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+}
+
+:lang(ja) h1,
+:lang(ja) h2,
+:lang(ja) h3,
+:lang(ja) p {
+  word-break: auto-phrase;
 }

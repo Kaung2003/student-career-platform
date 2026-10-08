@@ -4,6 +4,11 @@ Portfolios, certification tracking, and AI interview practice for students and n
 
 - **Frontend:** React + Vite + Tailwind (`frontend/`) — deployed on **Netlify**
 - **Backend:** Express + Prisma + PostgreSQL (`backend/`) — deployed on **Render**
+- **Languages:** English, 日本語, 中文, Español, Deutsch, မြန်မာ — switch from the header or sidebar; AI replies follow the chosen language
+
+### Adding or editing translations
+
+All UI text lives in `frontend/src/i18n/locales/`. `en.ts` is the source of truth; every other locale is typed against it, so `npm run build` fails if a key is missing. Use `t("key", { name })` in components and `{placeholders}` in strings.
 
 ## Local development
 

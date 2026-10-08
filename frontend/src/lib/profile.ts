@@ -1,21 +1,22 @@
 import type { StudentProfile } from "./types";
+import type { MessageKey } from "../i18n/locales/en";
 
 export interface CompletenessItem {
-  label: string;
+  label: MessageKey;
   done: boolean;
   to: string;
 }
 
 export function profileChecklist(profile: StudentProfile | null, certCount: number): CompletenessItem[] {
   return [
-    { label: "Add a headline", done: Boolean(profile?.headline), to: "/profile" },
-    { label: "Write a short bio", done: Boolean(profile?.bio && profile.bio.length >= 40), to: "/profile" },
-    { label: "Add your school", done: Boolean(profile?.school), to: "/profile" },
-    { label: "List at least 3 skills", done: (profile?.skills.length ?? 0) >= 3, to: "/profile" },
-    { label: "Link GitHub or LinkedIn", done: Boolean(profile?.github || profile?.linkedin), to: "/profile" },
-    { label: "Upload your resume", done: Boolean(profile?.resumeUrl), to: "/profile" },
-    { label: "Add your first project", done: (profile?.projects?.length ?? 0) > 0, to: "/projects" },
-    { label: "Track a certification", done: certCount > 0, to: "/certifications" },
+    { label: "checklist.headline", done: Boolean(profile?.headline), to: "/profile" },
+    { label: "checklist.bio", done: Boolean(profile?.bio && profile.bio.length >= 40), to: "/profile" },
+    { label: "checklist.school", done: Boolean(profile?.school), to: "/profile" },
+    { label: "checklist.skills", done: (profile?.skills.length ?? 0) >= 3, to: "/profile" },
+    { label: "checklist.links", done: Boolean(profile?.github || profile?.linkedin), to: "/profile" },
+    { label: "checklist.resume", done: Boolean(profile?.resumeUrl), to: "/profile" },
+    { label: "checklist.project", done: (profile?.projects?.length ?? 0) > 0, to: "/projects" },
+    { label: "checklist.certification", done: certCount > 0, to: "/certifications" },
   ];
 }
 
