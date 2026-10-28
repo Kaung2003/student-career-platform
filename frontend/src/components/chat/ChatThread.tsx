@@ -90,7 +90,7 @@ function TypingIndicator({ compact }: { compact: boolean }) {
 }
 
 export function ChatComposer({ compact = false, autoFocus = false }: { compact?: boolean; autoFocus?: boolean }) {
-  const { send, sending, configured } = useChat();
+  const { send, sending, configured, stop } = useChat();
   const { t } = useI18n();
   const [input, setInput] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -135,14 +135,25 @@ export function ChatComposer({ compact = false, autoFocus = false }: { compact?:
           placeholder={disabled ? t("chat.placeholderDisabled") : t("chat.placeholder")}
           className="max-h-[180px] flex-1 resize-none bg-transparent px-2 py-1.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none disabled:cursor-not-allowed dark:text-slate-100 dark:placeholder:text-slate-500"
         />
-        <button
-          onClick={submit}
-          disabled={disabled || sending || !input.trim()}
-          aria-label={t("chat.send")}
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white transition hover:bg-blue-700 disabled:bg-slate-300 dark:disabled:bg-slate-700"
-        >
-          <SendIcon className="h-4 w-4" />
-        </button>
+        {sending ? (
+          <button
+            onClick={stop}
+            aria-label={t("chat.stop")}
+            title={t("chat.stop")}
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-900 text-white transition hover:bg-slate-700 dark:bg-slate-100 dark:text-slate-900"
+          >
+            <span className="h-3 w-3 rounded-sm bg-current" />
+          </button>
+        ) : (
+          <button
+            onClick={submit}
+            disabled={disabled || !input.trim()}
+            aria-label={t("chat.send")}
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white transition hover:bg-blue-700 disabled:bg-slate-300 dark:disabled:bg-slate-700"
+          >
+            <SendIcon className="h-4 w-4" />
+          </button>
+        )}
       </div>
       {!compact && (
         <p className="mt-2 text-center text-xs text-slate-400 dark:text-slate-500">
@@ -154,15 +165,18 @@ export function ChatComposer({ compact = false, autoFocus = false }: { compact?:
 }
 
 export function ChatThread({ compact = false }: { compact?: boolean }) {
-  const { active, sending, error, configured, send, retry } = useChat();
+  const { active, sending, error, configured, send, retry, loadingConversation } = useChat();
   const { user } = useAuth();
   const { t } = useI18n();
   const scrollRef = useRef<HTMLDivElement>(null);
   const messages = active?.messages ?? [];
+  const last = messages[messages.length - 1];
+  const waitingForFirstWord = sending && last?.role === "assistant" && !last.content;
+  const visible = waitingForFirstWord ? messages.slice(0, -1) : messages;
 
   useEffect(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
-  }, [messages.length, sending, error]);
+    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
+  }, [messages.length, last?.content.length, sending, error]);
 
   if (configured === false) {
     return (
@@ -183,7 +197,13 @@ export function ChatThread({ compact = false }: { compact?: boolean }) {
   return (
     <div ref={scrollRef} className={`flex-1 overflow-y-auto ${compact ? "px-4 py-4" : "px-4 py-8 sm:px-6"}`}>
       <div className={`mx-auto space-y-5 ${compact ? "" : "max-w-3xl"}`}>
-        {messages.length === 0 && (
+        {loadingConversation && (
+          <div className="flex justify-center py-10">
+            <div className="h-6 w-6 animate-spin rounded-full border-2 border-slate-300 border-t-blue-600" />
+          </div>
+        )}
+
+        {!loadingConversation && messages.length === 0 && (
           <div className={compact ? "pt-2" : "pt-8 text-center sm:pt-16"}>
             {!compact && (
               <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500 to-blue-600 text-white shadow-lg shadow-blue-600/20">
@@ -211,11 +231,11 @@ export function ChatThread({ compact = false }: { compact?: boolean }) {
           </div>
         )}
 
-        {messages.map((m, i) => (
+        {visible.map((m, i) => (
           <Message key={i} message={m} compact={compact} userName={user?.name ?? "You"} />
         ))}
 
-        {sending && <TypingIndicator compact={compact} />}
+        {waitingForFirstWord && <TypingIndicator compact={compact} />}
 
         {error && (
           <div className="flex items-center justify-between gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-300">

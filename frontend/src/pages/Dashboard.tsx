@@ -17,6 +17,7 @@ import {
   CheckIcon,
   CopyIcon,
   ExternalLinkIcon,
+  FileTextIcon,
   FolderIcon,
   MicIcon,
   PlusIcon,
@@ -67,6 +68,39 @@ function StatCard({
   );
 }
 
+interface ViewStats {
+  total: number;
+  last7: number;
+  daily: { date: string; count: number }[];
+}
+
+function ViewsCard({ stats }: { stats: ViewStats | null }) {
+  const { t, formatDate } = useI18n();
+  const max = Math.max(1, ...(stats?.daily.map((d) => d.count) ?? [0]));
+
+  return (
+    <Card>
+      <div className="flex items-center justify-between">
+        <h2 className="font-semibold text-slate-900 dark:text-white">{t("views.title")}</h2>
+        <span className="text-xs text-slate-400">{t("views.total", { count: stats?.total ?? 0 })}</span>
+      </div>
+      <p className="mt-3 text-3xl font-semibold tabular-nums tracking-tight text-slate-900 dark:text-white">{stats?.last7 ?? 0}</p>
+      <p className="text-xs text-slate-500 dark:text-slate-400">{t("views.last7", { count: stats?.last7 ?? 0 })}</p>
+      <div className="mt-4 flex h-16 items-end gap-[2px]" aria-label={t("views.subtitle")}>
+        {(stats?.daily ?? Array.from({ length: 14 }, (_, i) => ({ date: String(i), count: 0 }))).map((d) => (
+          <div
+            key={d.date}
+            title={d.date.length === 10 ? `${formatDate(`${d.date}T00:00:00`, { month: "short", day: "numeric" })}: ${d.count}` : undefined}
+            className="flex-1 rounded-t-[3px] bg-blue-600 dark:bg-blue-400"
+            style={{ height: d.count ? `${(d.count / max) * 100}%` : "2px", opacity: d.count ? 1 : 0.25 }}
+          />
+        ))}
+      </div>
+      <p className="mt-2 text-[11px] text-slate-400 dark:text-slate-500">{t("views.subtitle")}</p>
+    </Card>
+  );
+}
+
 function scoreFrom(feedback: string | null) {
   const match = feedback ? /Score:\s*(\d+)\s*\/\s*10/i.exec(feedback) : null;
   return match ? Number(match[1]) : null;
@@ -80,12 +114,14 @@ export function Dashboard() {
   const [certifications, setCertifications] = useState<Certification[]>([]);
   const [attempts, setAttempts] = useState<InterviewAttempt[]>([]);
   const [loading, setLoading] = useState(true);
+  const [views, setViews] = useState<ViewStats | null>(null);
 
   useEffect(() => {
     Promise.all([
       api.get<{ profile: StudentProfile | null }>("/profile/me").then((res) => setProfile(res.profile)),
       api.get<{ certifications: Certification[] }>("/certifications").then((res) => setCertifications(res.certifications)),
       api.get<{ attempts: InterviewAttempt[] }>("/interview/attempts").then((res) => setAttempts(res.attempts)),
+      api.get<ViewStats>("/profile/me/views").then(setViews),
     ])
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -119,7 +155,13 @@ export function Dashboard() {
           </h1>
         </div>
         {profile && (
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
+            <Link
+              to="/resume"
+              className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
+            >
+              <FileTextIcon className="h-4 w-4" /> {t("resume.build")}
+            </Link>
             <button
               onClick={copyLink}
               className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
@@ -248,7 +290,8 @@ export function Dashboard() {
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <ViewsCard stats={views} />
         <Card>
           <div className="flex items-center justify-between">
             <h2 className="font-semibold text-slate-900 dark:text-white">{t("dashboard.upcomingExams")}</h2>
@@ -292,7 +335,7 @@ export function Dashboard() {
           )}
         </Card>
 
-        <Card className="lg:col-span-2">
+        <Card className="md:col-span-2 lg:col-span-1">
           <div className="flex items-center justify-between">
             <h2 className="font-semibold text-slate-900 dark:text-white">{t("dashboard.recentPractice")}</h2>
             <Link to="/interview" className="text-xs font-medium text-blue-600 hover:underline dark:text-blue-400">

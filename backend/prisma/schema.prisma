@@ -42,6 +42,16 @@ enum FeedbackStatus {
   RESOLVED
 }
 
+enum ChatRole {
+  USER
+  ASSISTANT
+}
+
+enum NotificationType {
+  COMMENT
+  FEEDBACK_UPDATE
+}
+
 model User {
   id        String   @id @default(cuid())
   name      String
@@ -55,6 +65,10 @@ model User {
   interviewAttempts InterviewAttempt[]
   feedback          Feedback[]
   comments          Comment[]
+  resetTokens       PasswordResetToken[]
+  conversations     ChatConversation[]
+  notifications     Notification[]
+  auditLogs         AuditLog[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -74,6 +88,8 @@ model Certification {
 
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
+
+  @@index([userId])
 }
 
 model InterviewQuestion {
@@ -99,6 +115,8 @@ model InterviewAttempt {
   userId String
 
   createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
 }
 
 model Feedback {
@@ -111,6 +129,8 @@ model Feedback {
   userId String
 
   createdAt DateTime @default(now())
+
+  @@index([status, createdAt])
 }
 
 model StudentProfile {
@@ -133,6 +153,7 @@ model StudentProfile {
 
   projects  Project[]
   comments  Comment[]
+  views     ProfileView[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -149,6 +170,8 @@ model Comment {
   authorId String
 
   createdAt DateTime @default(now())
+
+  @@index([profileId, createdAt])
 }
 
 model Project {
@@ -165,4 +188,91 @@ model Project {
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  @@index([profileId])
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model ChatConversation {
+  id    String @id @default(cuid())
+  title String
+
+  user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId   String
+  messages ChatMessage[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, updatedAt])
+}
+
+model ChatMessage {
+  id      String   @id @default(cuid())
+  role    ChatRole
+  content String
+
+  conversation   ChatConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  conversationId String
+
+  createdAt DateTime @default(now())
+
+  @@index([conversationId, createdAt])
+}
+
+model ProfileView {
+  id String @id @default(cuid())
+  // Hash of viewer IP + day, so repeat visits on the same day count once. Never the raw IP.
+  visitorHash String
+
+  profile   StudentProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  profileId String
+
+  createdAt DateTime @default(now())
+
+  @@unique([profileId, visitorHash])
+  @@index([profileId, createdAt])
+}
+
+model Notification {
+  id     String           @id @default(cuid())
+  type   NotificationType
+  // Rendered by the client in the reader's language, e.g. { "name": "Ada", "slug": "ada" }.
+  data   Json
+  readAt DateTime?
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, readAt, createdAt])
+}
+
+model AuditLog {
+  id         String  @id @default(cuid())
+  action     String
+  targetType String
+  targetId   String?
+  details    Json?
+
+  actor   User?   @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  actorId String?
+
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
 }

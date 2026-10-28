@@ -13,13 +13,35 @@ All UI text lives in `frontend/src/i18n/locales/`. `en.ts` is the source of trut
 ## Local development
 
 ```bash
-cd backend && cp .env.example .env   # fill in DATABASE_URL, JWT_SECRET, GEMINI_API_KEY
-npm install && npm run db:push && npm run db:seed && npm run dev
+docker compose up -d                 # local Postgres (dev + test databases)
+cd backend && cp .env.example .env   # set DATABASE_URL, JWT_SECRET, GEMINI_API_KEY
+npm install && npm run db:migrate && npm run db:seed && npm run dev
 ```
 
 ```bash
 cd frontend && npm install && npm run dev   # http://localhost:5173 (proxies /api to :4000)
 ```
+
+### Tests and checks
+
+```bash
+cd backend && TEST_DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5432/career_test npm test
+cd frontend && npm test && npm run lint && npm run build
+```
+
+GitHub Actions (`.github/workflows/ci.yml`) runs all of these on every push and pull request.
+
+### Database changes
+
+Edit `backend/prisma/schema.prisma`, then run `npm run db:migrate:dev -- --name describe_change` to create a migration.
+Commit the new folder in `prisma/migrations/`. Deploys apply pending migrations with `npm run db:migrate`.
+
+## Security model
+
+- Sessions are an httpOnly, SameSite=Lax cookie (not readable by JavaScript); role and suspension are re-checked on every request.
+- All request bodies are validated with zod; links must be http(s).
+- Rate limits on login, sign-up, password reset and AI endpoints; `helmet` security headers.
+- Admin actions are written to an audit log (`/admin/audit`).
 
 ## Deployment
 
@@ -29,8 +51,8 @@ cd frontend && npm install && npm run dev   # http://localhost:5173 (proxies /ap
 2. In Render: **New → Blueprint**, pick this repo. `render.yaml` creates:
    - `student-career-platform-backend` (Node web service, root `backend/`)
    - `student-career-platform-db` (PostgreSQL)
-3. When prompted, set `GEMINI_API_KEY`, `CORS_ORIGIN` (your Netlify URL) and, optionally, the `R2_*` upload keys. `JWT_SECRET` and `DATABASE_URL` are filled in automatically.
-4. Each deploy builds the API, syncs the schema (`prisma db push`) and seeds interview questions.
+3. When prompted, set `GEMINI_API_KEY`, `APP_URL` (your Netlify URL), `ADMIN_EMAILS`, and optionally `RESEND_API_KEY` + `EMAIL_FROM` (password-reset emails) and the `R2_*` upload keys. `JWT_SECRET` and `DATABASE_URL` are filled in automatically.
+4. Each deploy builds the API, applies database migrations (`npm run db:migrate`) and seeds interview questions.
 5. Check `https://<your-service>.onrender.com/health` returns `{"status":"ok"}`.
 
 ### 2. Frontend on Netlify

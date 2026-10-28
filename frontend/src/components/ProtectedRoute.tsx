@@ -30,6 +30,16 @@ export function ProtectedRoute() {
   );
 }
 
+/** Signed-in only, without the app shell (e.g. the printable resume). */
+export function BareProtectedRoute() {
+  const { user, loading } = useAuth();
+  const location = useLocation();
+
+  if (loading) return <FullPageSpinner />;
+  if (!user) return <Navigate to="/login" replace state={{ from: location.pathname }} />;
+  return <Outlet />;
+}
+
 /** Layout route for the admin panel: signed-in users with the ADMIN role only. */
 export function AdminRoute() {
   const { user, loading } = useAuth();

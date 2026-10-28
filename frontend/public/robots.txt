@@ -1,2 +1,7 @@
 User-agent: *
 Allow: /
+Disallow: /dashboard
+Disallow: /admin
+Disallow: /settings
+
+Sitemap: https://student-career-platform.netlify.app/sitemap.xml

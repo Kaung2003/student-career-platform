@@ -8,7 +8,7 @@ services:
     rootDir: backend
     plan: free
     region: oregon
-    buildCommand: npm ci && npm run build && npm run db:push && npm run db:seed
+    buildCommand: npm ci && npm run build && npm run db:migrate && npm run db:seed
     startCommand: npm start
     healthCheckPath: /health
     envVars:
@@ -24,6 +24,13 @@ services:
       - key: CORS_ORIGIN
         sync: false
       - key: GEMINI_API_KEY
+        sync: false
+      - key: APP_URL
+        value: https://student-career-platform.netlify.app
+      # Password-reset emails via resend.com (optional).
+      - key: RESEND_API_KEY
+        sync: false
+      - key: EMAIL_FROM
         sync: false
       # Comma-separated emails that are promoted to admin when they log in.
       - key: ADMIN_EMAILS

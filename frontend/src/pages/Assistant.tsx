@@ -68,7 +68,7 @@ function History({ onPick }: { onPick?: () => void }) {
                   confirmLabel: t("common.delete"),
                   danger: true,
                 });
-                if (ok) deleteChat(c.id);
+                if (ok) void deleteChat(c.id);
               }}
               aria-label={t("assistant.deleteConversation")}
               className="rounded p-1 text-slate-400 opacity-0 transition hover:text-red-600 group-hover:opacity-100 dark:hover:text-red-400"

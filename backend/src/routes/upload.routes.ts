@@ -10,6 +10,13 @@ uploadRouter.use(requireAuth);
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
 const ALLOWED_TYPES = ["resume", "transcript", "project-image"] as const;
+
+// Which file formats each kind of upload accepts.
+const ALLOWED_MIME: Record<(typeof ALLOWED_TYPES)[number], string[]> = {
+  resume: ["application/pdf"],
+  transcript: ["application/pdf"],
+  "project-image": ["image/png", "image/jpeg", "image/webp", "image/gif"],
+};
 type UploadType = (typeof ALLOWED_TYPES)[number];
 
 function isUploadType(value: unknown): value is UploadType {
@@ -34,6 +41,11 @@ uploadRouter.post("/", upload.single("file"), async (req, res) => {
 
   if (!req.file) {
     res.status(400).json({ error: "file is required" });
+    return;
+  }
+
+  if (!ALLOWED_MIME[type].includes(req.file.mimetype)) {
+    res.status(400).json({ error: `This file type isn't allowed. Use: ${ALLOWED_MIME[type].join(", ")}` });
     return;
   }
 

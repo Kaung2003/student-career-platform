@@ -1,93 +1,156 @@
 import bcrypt from "bcrypt";
+import { createHash, randomBytes } from "crypto";
 import { Router } from "express";
+import { z } from "zod";
 import { requireAuth } from "../middleware/require-auth.js";
 import { prisma } from "../lib/prisma.js";
 import { signAuthToken } from "../lib/jwt.js";
 import { slugify, uniqueSlugFrom } from "../lib/slugify.js";
-import { Role } from "../generated/prisma/enums.js";
 import { ensureBootstrapAdmin } from "../lib/admin.js";
+import { HttpError, parse } from "../lib/http.js";
+import { email, password, personName } from "../lib/schemas.js";
+import { clearSessionCookie, setSessionCookie } from "../lib/session.js";
+import { loginLimiter, signupLimiter } from "../lib/rate-limit.js";
+import { appUrl, sendEmail } from "../lib/email.js";
 
-const SALT_ROUNDS = 10;
+export const SALT_ROUNDS = 10;
+const RESET_TOKEN_TTL_MS = 60 * 60 * 1000;
 
 export const authRouter = Router();
 
-authRouter.post("/register", async (req, res) => {
-  const { name, email, password, role } = req.body ?? {};
+type PublicUser = { id: string; name: string; email: string; role: string };
 
-  if (typeof name !== "string" || typeof email !== "string" || typeof password !== "string") {
-    res.status(400).json({ error: "name, email and password are required" });
-    return;
+function toPublicUser(user: PublicUser) {
+  return { id: user.id, name: user.name, email: user.email, role: user.role };
+}
+
+function startSession(req: Parameters<typeof setSessionCookie>[0], res: Parameters<typeof setSessionCookie>[1], user: PublicUser) {
+  setSessionCookie(req, res, signAuthToken({ userId: user.id, role: user.role }));
+}
+
+function findUserByEmail(address: string) {
+  // Older accounts may have been stored with capital letters.
+  return prisma.user.findFirst({ where: { email: { equals: address, mode: "insensitive" } } });
+}
+
+const hashToken = (token: string) => createHash("sha256").update(token).digest("hex");
+
+const registerSchema = z.object({
+  name: personName,
+  email,
+  password,
+  role: z.enum(["STUDENT", "EMPLOYER"]).optional(),
+});
+
+authRouter.post("/register", signupLimiter, async (req, res) => {
+  const body = parse(registerSchema, req.body);
+
+  if (await findUserByEmail(body.email)) {
+    throw new HttpError(409, "An account with that email already exists");
   }
-
-  if (role !== undefined && (!Object.values(Role).includes(role) || role === Role.ADMIN)) {
-    res.status(400).json({ error: `role must be one of: ${Object.values(Role).join(", ")}` });
-    return;
-  }
-
-  const existing = await prisma.user.findUnique({ where: { email } });
-  if (existing) {
-    res.status(409).json({ error: "A user with that email already exists" });
-    return;
-  }
-
-  const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
 
   const created = await prisma.user.create({
-    data: { name, email, password: hashedPassword, role },
+    data: {
+      name: body.name,
+      email: body.email,
+      password: await bcrypt.hash(body.password, SALT_ROUNDS),
+      ...(body.role ? { role: body.role } : {}),
+    },
   });
   const user = await ensureBootstrapAdmin(created);
 
-  const slug = await uniqueSlugFrom(slugify(name));
+  const slug = await uniqueSlugFrom(slugify(user.name));
   await prisma.studentProfile.create({ data: { userId: user.id, slug } });
 
-  const token = signAuthToken({ userId: user.id, role: user.role });
-
-  res.status(201).json({
-    token,
-    user: { id: user.id, name: user.name, email: user.email, role: user.role },
-  });
+  startSession(req, res, user);
+  res.status(201).json({ user: toPublicUser(user) });
 });
 
-authRouter.post("/login", async (req, res) => {
-  const { email, password } = req.body ?? {};
+const loginSchema = z.object({ email: z.string().trim().min(1), password: z.string().min(1) });
 
-  if (typeof email !== "string" || typeof password !== "string") {
-    res.status(400).json({ error: "email and password are required" });
-    return;
-  }
+authRouter.post("/login", loginLimiter, async (req, res) => {
+  const body = parse(loginSchema, req.body);
 
-  const found = await prisma.user.findUnique({ where: { email } });
-  const passwordMatches = found ? await bcrypt.compare(password, found.password) : false;
+  const found = await findUserByEmail(body.email);
+  const passwordMatches = found ? await bcrypt.compare(body.password, found.password) : false;
 
   if (!found || !passwordMatches) {
-    res.status(401).json({ error: "Invalid email or password" });
-    return;
+    throw new HttpError(401, "Invalid email or password");
   }
 
   if (found.suspended) {
-    res.status(403).json({ error: "This account has been suspended. Contact support for help." });
-    return;
+    throw new HttpError(403, "This account has been suspended. Contact support for help.");
   }
 
   const user = await ensureBootstrapAdmin(found);
+  startSession(req, res, user);
+  res.json({ user: toPublicUser(user) });
+});
 
-  const token = signAuthToken({ userId: user.id, role: user.role });
-
-  res.json({
-    token,
-    user: { id: user.id, name: user.name, email: user.email, role: user.role },
-  });
+authRouter.post("/logout", (req, res) => {
+  clearSessionCookie(req, res);
+  res.status(204).send();
 });
 
 authRouter.get("/me", requireAuth, async (req, res) => {
   const found = await prisma.user.findUnique({ where: { id: req.auth!.userId } });
 
   if (!found) {
-    res.status(404).json({ error: "User not found" });
-    return;
+    throw new HttpError(404, "User not found");
   }
 
   const user = await ensureBootstrapAdmin(found);
 
-  res.json({ id: user.id, name: user.name, email: user.email, role: user.role });
+  // Clients that signed in before cookies existed send their token as a header; move them to the cookie.
+  if (req.authVia === "bearer") {
+    startSession(req, res, user);
+  }
+
+  res.json(toPublicUser(user));
+});
+
+authRouter.post("/forgot-password", signupLimiter, async (req, res) => {
+  const body = parse(z.object({ email: z.string().trim().max(254) }), req.body);
+  const user = body.email ? await findUserByEmail(body.email) : null;
+
+  if (user && !user.suspended) {
+    const token = randomBytes(32).toString("base64url");
+    await prisma.passwordResetToken.create({
+      data: { userId: user.id, tokenHash: hashToken(token), expiresAt: new Date(Date.now() + RESET_TOKEN_TTL_MS) },
+    });
+
+    const link = `${appUrl()}/reset-password?token=${token}`;
+    try {
+      await sendEmail(
+        user.email,
+        "Reset your Student Career Platform password",
+        `Hi ${user.name},\n\nSomeone asked to reset the password for your account. Open this link within one hour to choose a new password:\n\n${link}\n\nIf you didn't ask for this, you can ignore this email — your password won't change.`,
+      );
+    } catch (err) {
+      console.error("Failed to send password reset email", err);
+    }
+  }
+
+  // Same answer whether or not the account exists, so this can't be used to discover emails.
+  res.json({ ok: true });
+});
+
+authRouter.post("/reset-password", signupLimiter, async (req, res) => {
+  const body = parse(z.object({ token: z.string().min(20).max(200), password }), req.body);
+
+  const record = await prisma.passwordResetToken.findUnique({ where: { tokenHash: hashToken(body.token) } });
+
+  if (!record || record.usedAt || record.expiresAt < new Date()) {
+    throw new HttpError(400, "This reset link is invalid or has expired. Request a new one.");
+  }
+
+  const hashed = await bcrypt.hash(body.password, SALT_ROUNDS);
+  await prisma.$transaction([
+    prisma.user.update({ where: { id: record.userId }, data: { password: hashed } }),
+    prisma.passwordResetToken.update({ where: { id: record.id }, data: { usedAt: new Date() } }),
+    // Any other outstanding links stop working once the password changes.
+    prisma.passwordResetToken.deleteMany({ where: { userId: record.userId, usedAt: null, id: { not: record.id } } }),
+  ]);
+
+  res.json({ ok: true });
 });

@@ -48,7 +48,14 @@ export function Login() {
           />
         </Field>
 
-        <Field label={t("auth.password")}>
+        <Field
+          label={t("auth.password")}
+          action={
+            <Link to="/forgot-password" className="text-xs font-medium text-blue-600 hover:underline dark:text-blue-400">
+              {t("auth.forgot")}
+            </Link>
+          }
+        >
           <input
             type="password"
             required

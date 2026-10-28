@@ -2,6 +2,7 @@ import { useState, type SubmitEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useI18n } from "../i18n/I18nContext";
+import { formatNodes } from "../i18n/formatNodes";
 import { ApiError } from "../lib/api";
 import { AuthLayout } from "../components/AuthLayout";
 import { Field, inputClass } from "../components/ui/Field";
@@ -63,7 +64,7 @@ export function Register() {
           <input
             type="password"
             required
-            minLength={6}
+            minLength={8}
             autoComplete="new-password"
             placeholder={t("auth.passwordPlaceholder")}
             value={password}
@@ -78,6 +79,21 @@ export function Register() {
           {submitting ? t("auth.creatingAccount") : t("auth.register")}
         </Button>
       </form>
+
+      <p className="mt-4 text-center text-xs text-slate-500 dark:text-slate-400">
+        {formatNodes(t("auth.agree"), {
+          terms: (
+            <Link to="/terms" className="underline hover:text-slate-700 dark:hover:text-slate-300">
+              {t("legal.terms")}
+            </Link>
+          ),
+          privacy: (
+            <Link to="/privacy" className="underline hover:text-slate-700 dark:hover:text-slate-300">
+              {t("legal.privacy")}
+            </Link>
+          ),
+        })}
+      </p>
 
       <p className="mt-6 text-center text-sm text-slate-500 dark:text-slate-400">
         {t("auth.haveAccount")}{" "}

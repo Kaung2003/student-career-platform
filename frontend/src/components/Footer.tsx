@@ -23,6 +23,12 @@ export function Footer() {
           <Link to="/login" className="hover:text-slate-900 dark:hover:text-slate-100">
             {t("common.logIn")}
           </Link>
+          <Link to="/privacy" className="hover:text-slate-900 dark:hover:text-slate-100">
+            {t("legal.privacy")}
+          </Link>
+          <Link to="/terms" className="hover:text-slate-900 dark:hover:text-slate-100">
+            {t("legal.terms")}
+          </Link>
         </nav>
       </div>
       <div className="border-t border-slate-100 py-5 text-center text-xs text-slate-400 dark:border-slate-900 dark:text-slate-500">

@@ -16,7 +16,8 @@ import { Avatar } from "../components/ui/Avatar";
 import { Skeleton } from "../components/ui/Skeleton";
 import { TagInput } from "../components/ui/TagInput";
 import { FileUploadField } from "../components/ui/FileUploadField";
-import { ExternalLinkIcon, GithubIcon, GlobeIcon, LinkedinIcon } from "../components/icons";
+import { ExternalLinkIcon, FileTextIcon, GithubIcon, GlobeIcon, LinkedinIcon } from "../components/icons";
+import { Link } from "react-router-dom";
 
 function Section({ title, description, children }: { title: string; description: string; children: ReactNode }) {
   return (
@@ -123,6 +124,12 @@ export function Profile() {
         description={t("profile.description")}
         actions={
           <>
+            <Link
+              to="/resume"
+              className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
+            >
+              <FileTextIcon className="h-4 w-4" /> {t("resume.build")}
+            </Link>
             {slug && (
               <a
                 href={`/p/${slug}`}

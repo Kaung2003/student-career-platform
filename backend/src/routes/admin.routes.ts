@@ -2,6 +2,8 @@ import { Router } from "express";
 import { requireAdmin, requireAuth } from "../middleware/require-auth.js";
 import { prisma } from "../lib/prisma.js";
 import type { Prisma } from "../generated/prisma/client.js";
+import { audit } from "../lib/audit.js";
+import { notify } from "../lib/notify.js";
 
 export const adminRouter = Router();
 
@@ -160,6 +162,13 @@ adminRouter.patch("/users/:id", async (req, res) => {
     select: { id: true, role: true, suspended: true },
   });
 
+  if (role !== undefined && role !== existing.role) {
+    await audit(req.auth!.userId, "user.role_changed", "user", id, { email: existing.email, from: existing.role, to: role });
+  }
+  if (suspended !== undefined && suspended !== existing.suspended) {
+    await audit(req.auth!.userId, suspended ? "user.suspended" : "user.reactivated", "user", id, { email: existing.email });
+  }
+
   res.json({ user });
 });
 
@@ -178,6 +187,7 @@ adminRouter.delete("/users/:id", async (req, res) => {
   }
 
   await prisma.user.delete({ where: { id } });
+  await audit(req.auth!.userId, "user.deleted", "user", id, { email: existing.email, name: existing.name });
   res.status(204).send();
 });
 
@@ -227,6 +237,9 @@ adminRouter.patch("/feedback/:id", async (req, res) => {
   }
 
   const feedback = await prisma.feedback.update({ where: { id: existing.id }, data: { status } });
+  if (status !== existing.status) {
+    await notify(existing.userId, "FEEDBACK_UPDATE", { status, excerpt: existing.message.slice(0, 80) });
+  }
   res.json({ feedback });
 });
 
@@ -238,6 +251,7 @@ adminRouter.delete("/feedback/:id", async (req, res) => {
   }
 
   await prisma.feedback.delete({ where: { id: existing.id } });
+  await audit(req.auth!.userId, "feedback.deleted", "feedback", existing.id);
   res.status(204).send();
 });
 
@@ -246,8 +260,8 @@ adminRouter.delete("/feedback/:id", async (req, res) => {
 function parseQuestion(body: unknown): { category: (typeof CATEGORIES)[number]; prompt: string; tip: string | null } | string {
   const { category, prompt, tip } = (body ?? {}) as Record<string, unknown>;
   if (!oneOf(CATEGORIES, category)) return `category must be one of: ${CATEGORIES.join(", ")}`;
-  if (typeof prompt !== "string" || prompt.trim().length < 5) return "prompt is required";
-  if (tip !== undefined && tip !== null && typeof tip !== "string") return "tip must be a string";
+  if (typeof prompt !== "string" || prompt.trim().length < 5 || prompt.length > 500) return "prompt must be 5–500 characters";
+  if (tip !== undefined && tip !== null && (typeof tip !== "string" || tip.length > 500)) return "tip must be at most 500 characters";
   return { category, prompt: prompt.trim(), tip: typeof tip === "string" && tip.trim() ? tip.trim() : null };
 }
 
@@ -277,6 +291,7 @@ adminRouter.post("/questions", async (req, res) => {
   }
 
   const question = await prisma.interviewQuestion.create({ data });
+  await audit(req.auth!.userId, "question.created", "question", question.id, { prompt: question.prompt });
   res.status(201).json({ question });
 });
 
@@ -294,6 +309,7 @@ adminRouter.put("/questions/:id", async (req, res) => {
   }
 
   const question = await prisma.interviewQuestion.update({ where: { id: existing.id }, data });
+  await audit(req.auth!.userId, "question.updated", "question", question.id, { prompt: question.prompt });
   res.json({ question });
 });
 
@@ -305,6 +321,7 @@ adminRouter.delete("/questions/:id", async (req, res) => {
   }
 
   await prisma.interviewQuestion.delete({ where: { id: existing.id } });
+  await audit(req.auth!.userId, "question.deleted", "question", existing.id, { prompt: existing.prompt });
   res.status(204).send();
 });
 
@@ -345,5 +362,29 @@ adminRouter.delete("/comments/:id", async (req, res) => {
   }
 
   await prisma.comment.delete({ where: { id: existing.id } });
+  await audit(req.auth!.userId, "comment.deleted", "comment", existing.id, { body: existing.body.slice(0, 200) });
   res.status(204).send();
+});
+
+// ---------- Audit log ----------
+
+adminRouter.get("/audit-logs", async (_req, res) => {
+  const logs = await prisma.auditLog.findMany({
+    orderBy: { createdAt: "desc" },
+    take: 200,
+    include: { actor: { select: { name: true, email: true } } },
+  });
+
+  res.json({
+    logs: logs.map((log) => ({
+      id: log.id,
+      action: log.action,
+      targetType: log.targetType,
+      targetId: log.targetId,
+      details: log.details,
+      createdAt: log.createdAt,
+      actorName: log.actor?.name ?? null,
+      actorEmail: log.actor?.email ?? null,
+    })),
+  });
 });

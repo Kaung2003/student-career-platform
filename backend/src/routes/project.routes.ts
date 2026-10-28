@@ -1,59 +1,66 @@
 import { Router } from "express";
+import { z } from "zod";
 import { requireAuth } from "../middleware/require-auth.js";
 import { prisma } from "../lib/prisma.js";
+import { HttpError, parse } from "../lib/http.js";
+import { optionalText, optionalUrl, tagList } from "../lib/schemas.js";
 
 export const projectRouter = Router();
 
 projectRouter.use(requireAuth);
 
-async function getOwnProfileOr404(userId: string) {
+const projectSchema = z.object({
+  title: z.string().trim().min(1, "is required").max(120, "must be at most 120 characters"),
+  description: optionalText(2000).optional(),
+  techStack: tagList.optional(),
+  projectUrl: optionalUrl.optional(),
+  githubUrl: optionalUrl.optional(),
+  imageUrl: optionalUrl.optional(),
+});
+
+const MAX_PROJECTS = 50;
+
+function ownProfile(userId: string) {
   return prisma.studentProfile.findUnique({ where: { userId } });
 }
 
-projectRouter.get("/", async (req, res) => {
-  const profile = await getOwnProfileOr404(req.auth!.userId);
-
-  if (!profile) {
-    res.json({ projects: [] });
-    return;
+async function ownProjectOr404(userId: string, id: string) {
+  const profile = await ownProfile(userId);
+  const project = profile ? await prisma.project.findUnique({ where: { id } }) : null;
+  if (!profile || !project || project.profileId !== profile.id) {
+    throw new HttpError(404, "Project not found");
   }
+  return project;
+}
 
-  const projects = await prisma.project.findMany({
-    where: { profileId: profile.id },
-    orderBy: { createdAt: "desc" },
-  });
-
+projectRouter.get("/", async (req, res) => {
+  const profile = await ownProfile(req.auth!.userId);
+  const projects = profile
+    ? await prisma.project.findMany({ where: { profileId: profile.id }, orderBy: { createdAt: "desc" } })
+    : [];
   res.json({ projects });
 });
 
 projectRouter.post("/", async (req, res) => {
-  const profile = await getOwnProfileOr404(req.auth!.userId);
-
+  const profile = await ownProfile(req.auth!.userId);
   if (!profile) {
-    res.status(400).json({ error: "Create your profile before adding projects" });
-    return;
+    throw new HttpError(400, "Create your profile before adding projects");
   }
 
-  const { title, description, techStack, projectUrl, githubUrl, imageUrl } = req.body ?? {};
+  const body = parse(projectSchema, req.body);
 
-  if (typeof title !== "string" || title.trim().length === 0) {
-    res.status(400).json({ error: "title is required" });
-    return;
-  }
-
-  if (techStack !== undefined && (!Array.isArray(techStack) || !techStack.every((t: unknown) => typeof t === "string"))) {
-    res.status(400).json({ error: "techStack must be an array of strings" });
-    return;
+  if ((await prisma.project.count({ where: { profileId: profile.id } })) >= MAX_PROJECTS) {
+    throw new HttpError(400, `You can have at most ${MAX_PROJECTS} projects`);
   }
 
   const project = await prisma.project.create({
     data: {
-      title,
-      description,
-      techStack: techStack ?? [],
-      projectUrl,
-      githubUrl,
-      imageUrl,
+      title: body.title,
+      description: body.description ?? null,
+      techStack: body.techStack ?? [],
+      projectUrl: body.projectUrl ?? null,
+      githubUrl: body.githubUrl ?? null,
+      imageUrl: body.imageUrl ?? null,
       profileId: profile.id,
     },
   });
@@ -62,46 +69,19 @@ projectRouter.post("/", async (req, res) => {
 });
 
 projectRouter.put("/:id", async (req, res) => {
-  const profile = await getOwnProfileOr404(req.auth!.userId);
-  const existing = profile ? await prisma.project.findUnique({ where: { id: req.params["id"] } }) : null;
-
-  if (!profile || !existing || existing.profileId !== profile.id) {
-    res.status(404).json({ error: "Project not found" });
-    return;
-  }
-
-  const { title, description, techStack, projectUrl, githubUrl, imageUrl } = req.body ?? {};
-
-  if (techStack !== undefined && (!Array.isArray(techStack) || !techStack.every((t: unknown) => typeof t === "string"))) {
-    res.status(400).json({ error: "techStack must be an array of strings" });
-    return;
-  }
+  const existing = await ownProjectOr404(req.auth!.userId, req.params["id"] as string);
+  const body = parse(projectSchema.partial(), req.body);
 
   const project = await prisma.project.update({
     where: { id: existing.id },
-    data: {
-      ...(title !== undefined ? { title } : {}),
-      ...(description !== undefined ? { description } : {}),
-      ...(techStack !== undefined ? { techStack } : {}),
-      ...(projectUrl !== undefined ? { projectUrl } : {}),
-      ...(githubUrl !== undefined ? { githubUrl } : {}),
-      ...(imageUrl !== undefined ? { imageUrl } : {}),
-    },
+    data: Object.fromEntries(Object.entries(body).filter(([, v]) => v !== undefined)),
   });
 
   res.json({ project });
 });
 
 projectRouter.delete("/:id", async (req, res) => {
-  const profile = await getOwnProfileOr404(req.auth!.userId);
-  const existing = profile ? await prisma.project.findUnique({ where: { id: req.params["id"] } }) : null;
-
-  if (!profile || !existing || existing.profileId !== profile.id) {
-    res.status(404).json({ error: "Project not found" });
-    return;
-  }
-
+  const existing = await ownProjectOr404(req.auth!.userId, req.params["id"] as string);
   await prisma.project.delete({ where: { id: existing.id } });
-
   res.status(204).send();
 });

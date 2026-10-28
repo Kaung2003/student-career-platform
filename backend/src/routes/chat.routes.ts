@@ -1,7 +1,11 @@
-import { Router } from "express";
+import { Router, type Response } from "express";
+import { z } from "zod";
 import { requireAuth } from "../middleware/require-auth.js";
 import { prisma } from "../lib/prisma.js";
-import { complete, isAiConfigured, languageInstruction } from "../lib/ai.js";
+import { complete, isAiConfigured, languageInstruction, stream, type AiMessage } from "../lib/ai.js";
+import { HttpError, parse } from "../lib/http.js";
+import { aiLanguage } from "../lib/schemas.js";
+import { aiLimiter } from "../lib/rate-limit.js";
 
 export const chatRouter = Router();
 
@@ -13,58 +17,131 @@ Help with resumes, cover letters, project write-ups, interview preparation, cert
 
 const MAX_HISTORY = 20;
 const MAX_MESSAGE_LENGTH = 4000;
+const MAX_CONVERSATIONS = 100;
+
+function requireAi() {
+  if (!isAiConfigured()) {
+    throw new HttpError(503, "AI assistant is not configured on this server.");
+  }
+}
+
+function titleFrom(text: string) {
+  const clean = text.replace(/\s+/g, " ").trim();
+  return clean.length > 60 ? `${clean.slice(0, 60)}…` : clean;
+}
+
+/** Gemini requires the conversation to start with a user turn. */
+function trimHistory(history: AiMessage[]) {
+  const recent = history.slice(-MAX_HISTORY);
+  while (recent[0]?.role === "assistant") recent.shift();
+  return recent;
+}
 
 chatRouter.get("/status", (_req, res) => {
   res.json({ configured: isAiConfigured() });
 });
 
-interface ChatMessage {
-  role: "user" | "assistant";
-  content: string;
+// ---------- Saved conversations ----------
+
+chatRouter.get("/conversations", async (req, res) => {
+  const conversations = await prisma.chatConversation.findMany({
+    where: { userId: req.auth!.userId },
+    orderBy: { updatedAt: "desc" },
+    take: MAX_CONVERSATIONS,
+    select: { id: true, title: true, updatedAt: true },
+  });
+  res.json({ conversations });
+});
+
+async function ownConversationOr404(userId: string, id: string) {
+  const conversation = await prisma.chatConversation.findUnique({ where: { id } });
+  if (!conversation || conversation.userId !== userId) {
+    throw new HttpError(404, "Conversation not found");
+  }
+  return conversation;
 }
 
-function isChatMessage(value: unknown): value is ChatMessage {
-  if (typeof value !== "object" || value === null) return false;
-  const v = value as Record<string, unknown>;
-  return (v["role"] === "user" || v["role"] === "assistant") && typeof v["content"] === "string";
+chatRouter.get("/conversations/:id", async (req, res) => {
+  const conversation = await ownConversationOr404(req.auth!.userId, req.params["id"] as string);
+  const messages = await prisma.chatMessage.findMany({
+    where: { conversationId: conversation.id },
+    orderBy: { createdAt: "asc" },
+    select: { id: true, role: true, content: true, createdAt: true },
+  });
+  res.json({ conversation: { id: conversation.id, title: conversation.title, updatedAt: conversation.updatedAt }, messages });
+});
+
+chatRouter.delete("/conversations/:id", async (req, res) => {
+  const conversation = await ownConversationOr404(req.auth!.userId, req.params["id"] as string);
+  await prisma.chatConversation.delete({ where: { id: conversation.id } });
+  res.status(204).send();
+});
+
+const streamSchema = z.object({
+  conversationId: z.string().max(40).optional(),
+  message: z.string().trim().min(1, "is required").max(MAX_MESSAGE_LENGTH),
+  language: aiLanguage,
+  /** Set when retrying: the user's last message is already saved, so don't store it twice. */
+  retry: z.boolean().optional(),
+});
+
+function sse(res: Response, event: string, data: unknown) {
+  res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
 }
 
-chatRouter.post("/message", async (req, res) => {
-  if (!isAiConfigured()) {
-    res.status(503).json({ error: "AI assistant is not configured on this server." });
-    return;
+/**
+ * Sends a message and streams the reply as server-sent events:
+ * `meta` (conversation id/title), many `delta` chunks, then `done` or `error`.
+ */
+chatRouter.post("/stream", aiLimiter, async (req, res) => {
+  requireAi();
+  const body = parse(streamSchema, req.body);
+  const userId = req.auth!.userId;
+
+  const conversation = body.conversationId
+    ? await ownConversationOr404(userId, body.conversationId)
+    : await prisma.chatConversation.create({ data: { userId, title: titleFrom(body.message) } });
+
+  const previous = await prisma.chatMessage.findMany({
+    where: { conversationId: conversation.id },
+    orderBy: { createdAt: "asc" },
+    select: { role: true, content: true },
+  });
+  const history: AiMessage[] = previous.map((m) => ({ role: m.role === "USER" ? "user" : "assistant", content: m.content }));
+
+  if (body.retry && history.at(-1)?.role === "user") {
+    history.pop();
+  } else {
+    await prisma.chatMessage.create({ data: { conversationId: conversation.id, role: "USER", content: body.message } });
   }
 
-  const { message, history, language } = req.body ?? {};
+  const system = (await buildSystemPrompt(userId)) + languageInstruction(body.language);
 
-  if (typeof message !== "string" || message.trim().length === 0) {
-    res.status(400).json({ error: "message is required" });
-    return;
-  }
-
-  if (message.length > MAX_MESSAGE_LENGTH) {
-    res.status(400).json({ error: `message must be at most ${MAX_MESSAGE_LENGTH} characters` });
-    return;
-  }
-
-  if (history !== undefined && (!Array.isArray(history) || !history.every(isChatMessage))) {
-    res.status(400).json({ error: "history must be an array of { role, content } messages" });
-    return;
-  }
-
-  const system = (await buildSystemPrompt(req.auth!.userId)) + languageInstruction(language);
-  const recentHistory = ((history as ChatMessage[] | undefined) ?? []).slice(-MAX_HISTORY);
-  // Gemini requires the conversation to start with a user turn.
-  while (recentHistory[0]?.role === "assistant") recentHistory.shift();
+  res.status(200);
+  res.setHeader("Content-Type", "text/event-stream; charset=utf-8");
+  res.setHeader("Cache-Control", "no-cache, no-transform");
+  res.setHeader("X-Accel-Buffering", "no");
+  res.flushHeaders();
+  sse(res, "meta", { conversationId: conversation.id, title: conversation.title });
 
   try {
-    const reply = await complete(system, [...recentHistory, { role: "user", content: message }]);
-    res.json({ reply });
+    const reply = await stream(system, trimHistory([...history, { role: "user", content: body.message }]), (text) =>
+      sse(res, "delta", { text }),
+    );
+    await prisma.$transaction([
+      prisma.chatMessage.create({ data: { conversationId: conversation.id, role: "ASSISTANT", content: reply } }),
+      prisma.chatConversation.update({ where: { id: conversation.id }, data: { updatedAt: new Date() } }),
+    ]);
+    sse(res, "done", {});
   } catch (err) {
-    console.error("Chat request failed:", err);
-    res.status(502).json({ error: "Failed to reach the AI assistant. Try again in a moment." });
+    console.error("Chat stream failed:", err);
+    sse(res, "error", { error: "Failed to reach the AI assistant. Try again in a moment." });
+  } finally {
+    res.end();
   }
 });
+
+// ---------- One-off "Improve with AI" writing help ----------
 
 const IMPROVE_PROMPTS = {
   headline:
@@ -74,38 +151,29 @@ const IMPROVE_PROMPTS = {
     "Rewrite this portfolio project description so it is clear and compelling for recruiters: what it does, how it was built, and the impact or what was learned (2-4 sentences). Do not invent facts. Reply with only the description.",
 } as const;
 
-type ImproveKind = keyof typeof IMPROVE_PROMPTS;
+const improveSchema = z.object({
+  kind: z.enum(["headline", "bio", "project"]),
+  text: z.string().max(MAX_MESSAGE_LENGTH),
+  context: z.string().max(1000).optional(),
+  language: aiLanguage,
+});
 
-chatRouter.post("/improve", async (req, res) => {
-  if (!isAiConfigured()) {
-    res.status(503).json({ error: "AI assistant is not configured on this server." });
-    return;
-  }
+chatRouter.post("/improve", aiLimiter, async (req, res) => {
+  requireAi();
+  const body = parse(improveSchema, req.body);
 
-  const { kind, text, context, language } = req.body ?? {};
-
-  if (typeof kind !== "string" || !(kind in IMPROVE_PROMPTS)) {
-    res.status(400).json({ error: `kind must be one of: ${Object.keys(IMPROVE_PROMPTS).join(", ")}` });
-    return;
-  }
-
-  if (typeof text !== "string" || text.length > MAX_MESSAGE_LENGTH) {
-    res.status(400).json({ error: "text is required" });
-    return;
-  }
-
-  const details = typeof context === "string" ? context.slice(0, 1000) : "";
-  const system = `${IMPROVE_PROMPTS[kind as ImproveKind]}\n\n${await buildSystemPrompt(req.auth!.userId, false)}${languageInstruction(language)}`;
-  const input = text.trim()
-    ? `${details ? `Context: ${details}\n\n` : ""}Current text:\n${text}`
-    : `${details ? `Context: ${details}\n\n` : ""}The student hasn't written anything yet. Draft one from their profile.`;
+  const system = `${IMPROVE_PROMPTS[body.kind]}\n\n${await buildSystemPrompt(req.auth!.userId, false)}${languageInstruction(body.language)}`;
+  const details = body.context ? `Context: ${body.context}\n\n` : "";
+  const input = body.text.trim()
+    ? `${details}Current text:\n${body.text}`
+    : `${details}The student hasn't written anything yet. Draft one from their profile.`;
 
   try {
     const suggestion = await complete(system, [{ role: "user", content: input }]);
     res.json({ suggestion: suggestion.trim() });
   } catch (err) {
     console.error("Improve request failed:", err);
-    res.status(502).json({ error: "Failed to reach the AI assistant. Try again in a moment." });
+    throw new HttpError(502, "Failed to reach the AI assistant. Try again in a moment.");
   }
 });
 

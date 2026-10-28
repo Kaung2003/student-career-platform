@@ -1,7 +1,11 @@
 import { Router } from "express";
 import { requireAuth } from "../middleware/require-auth.js";
 import { prisma } from "../lib/prisma.js";
+import { z } from "zod";
 import { complete, isAiConfigured, languageInstruction } from "../lib/ai.js";
+import { HttpError, parse } from "../lib/http.js";
+import { aiLanguage } from "../lib/schemas.js";
+import { aiLimiter } from "../lib/rate-limit.js";
 
 export const interviewRouter = Router();
 
@@ -40,18 +44,18 @@ interviewRouter.get("/attempts", async (req, res) => {
   res.json({ attempts });
 });
 
-interviewRouter.post("/practice", async (req, res) => {
-  const { questionId, answer, language } = req.body ?? {};
+const practiceSchema = z.object({
+  questionId: z.string().min(1).max(40),
+  answer: z.string().trim().min(1, "is required").max(6000, "must be at most 6000 characters"),
+  language: aiLanguage,
+});
 
-  if (typeof questionId !== "string" || typeof answer !== "string" || answer.trim().length === 0) {
-    res.status(400).json({ error: "questionId and answer are required" });
-    return;
-  }
+interviewRouter.post("/practice", aiLimiter, async (req, res) => {
+  const { questionId, answer, language } = parse(practiceSchema, req.body);
 
   const question = await prisma.interviewQuestion.findUnique({ where: { id: questionId } });
   if (!question) {
-    res.status(404).json({ error: "Question not found" });
-    return;
+    throw new HttpError(404, "Question not found");
   }
 
   if (!isAiConfigured()) {

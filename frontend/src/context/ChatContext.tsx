@@ -1,5 +1,5 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { api, ApiError } from "../lib/api";
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { api, ApiError, streamEvents } from "../lib/api";
 import { useAuth } from "./AuthContext";
 import { aiLanguageName, useI18n } from "../i18n/I18nContext";
 import type { MessageKey } from "../i18n/locales/en";
@@ -12,170 +12,209 @@ export interface ChatMessage {
 export interface Conversation {
   id: string;
   title: string;
-  messages: ChatMessage[];
   updatedAt: number;
+}
+
+interface ActiveConversation {
+  id: string | null;
+  title: string | null;
+  messages: ChatMessage[];
 }
 
 interface ChatContextValue {
   configured: boolean | null;
   conversations: Conversation[];
-  active: Conversation | null;
+  active: ActiveConversation | null;
+  loadingConversation: boolean;
   sending: boolean;
   error: string | null;
   send: (text: string) => Promise<void>;
   retry: () => Promise<void>;
+  stop: () => void;
   newChat: () => void;
   selectChat: (id: string) => void;
-  deleteChat: (id: string) => void;
+  deleteChat: (id: string) => Promise<void>;
 }
 
 const ChatContext = createContext<ChatContextValue | null>(null);
 
-const MAX_CONVERSATIONS = 30;
-
-function storageKey(userId: string) {
-  return `scp_chats_${userId}`;
+interface ServerConversation {
+  id: string;
+  title: string;
+  updatedAt: string;
 }
 
-function loadConversations(userId: string): Conversation[] {
-  try {
-    const raw = localStorage.getItem(storageKey(userId));
-    const parsed = raw ? (JSON.parse(raw) as Conversation[]) : [];
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-}
-
-function makeTitle(text: string) {
-  const clean = text.replace(/\s+/g, " ").trim();
-  return clean.length > 48 ? `${clean.slice(0, 48)}…` : clean;
-}
+const toConversation = (c: ServerConversation): Conversation => ({
+  id: c.id,
+  title: c.title,
+  updatedAt: new Date(c.updatedAt).getTime(),
+});
 
 export function ChatProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const { t, language } = useI18n();
   const [configured, setConfigured] = useState<boolean | null>(null);
   const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [activeId, setActiveId] = useState<string | null>(null);
+  const [active, setActive] = useState<ActiveConversation | null>(null);
+  const [loadingConversation, setLoadingConversation] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const loadedFor = useRef<string | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
+    abortRef.current?.abort();
+    setActive(null);
+    setError(null);
     if (!user) {
-      loadedFor.current = null;
       setConversations([]);
-      setActiveId(null);
       setConfigured(null);
       return;
     }
-    const loaded = loadConversations(user.id);
-    loadedFor.current = user.id;
-    setConversations(loaded);
-    setActiveId(loaded[0]?.id ?? null);
     api
       .get<{ configured: boolean }>("/chat/status")
       .then((res) => setConfigured(res.configured))
       .catch(() => setConfigured(false));
+    api
+      .get<{ conversations: ServerConversation[] }>("/chat/conversations")
+      .then((res) => setConversations(res.conversations.map(toConversation)))
+      .catch(() => setConversations([]));
   }, [user]);
 
-  useEffect(() => {
-    if (!user || loadedFor.current !== user.id) return;
-    try {
-      localStorage.setItem(storageKey(user.id), JSON.stringify(conversations.slice(0, MAX_CONVERSATIONS)));
-    } catch {
-      // Storage full or unavailable — chats still work for this session.
-    }
-  }, [conversations, user]);
+  const run = useCallback(
+    async (text: string, conversationId: string | null, isRetry: boolean) => {
+      const controller = new AbortController();
+      abortRef.current = controller;
+      setSending(true);
+      setError(null);
 
-  const active = useMemo(() => conversations.find((c) => c.id === activeId) ?? null, [conversations, activeId]);
+      // Placeholder the reply streams into.
+      setActive((a) => ({
+        id: a?.id ?? conversationId,
+        title: a?.title ?? null,
+        messages: [...(a?.messages ?? []), { role: "assistant", content: "" }],
+      }));
 
-  const request = useCallback(async (conversationId: string, history: ChatMessage[], text: string) => {
-    setSending(true);
-    setError(null);
-    try {
-      const res = await api.post<{ reply: string }>("/chat/message", {
-        message: text,
-        history,
-        language: aiLanguageName(language),
-      });
-      setConversations((list) =>
-        list.map((c) =>
-          c.id === conversationId
-            ? { ...c, messages: [...c.messages, { role: "assistant", content: res.reply }], updatedAt: Date.now() }
-            : c,
-        ),
-      );
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("chat.error"));
-    } finally {
-      setSending(false);
-    }
-  }, [language, t]);
+      const appendToReply = (chunk: string) =>
+        setActive((a) => {
+          if (!a) return a;
+          const messages = [...a.messages];
+          const last = messages[messages.length - 1];
+          if (last?.role === "assistant") messages[messages.length - 1] = { ...last, content: last.content + chunk };
+          return { ...a, messages };
+        });
+
+      let failed: string | null = null;
+      try {
+        await streamEvents(
+          "/chat/stream",
+          { conversationId: conversationId ?? undefined, message: text, language: aiLanguageName(language), retry: isRetry },
+          (event, payload) => {
+            if (event === "meta") {
+              const id = String(payload["conversationId"]);
+              const title = String(payload["title"]);
+              setActive((a) => (a ? { ...a, id, title } : a));
+              setConversations((list) => [{ id, title, updatedAt: Date.now() }, ...list.filter((c) => c.id !== id)]);
+            } else if (event === "delta") {
+              appendToReply(String(payload["text"] ?? ""));
+            } else if (event === "error") {
+              failed = String(payload["error"] ?? t("chat.error"));
+            }
+          },
+          controller.signal,
+        );
+      } catch (err) {
+        if ((err as Error).name !== "AbortError") {
+          failed = err instanceof ApiError ? err.message : t("chat.error");
+        }
+      } finally {
+        setSending(false);
+        abortRef.current = null;
+      }
+
+      if (failed) {
+        setError(failed);
+        // Drop the empty or partial reply; the user's message stays so Retry can resend it.
+        setActive((a) => (a ? { ...a, messages: a.messages.filter((m, i) => !(i === a.messages.length - 1 && m.role === "assistant")) } : a));
+      }
+    },
+    [language, t],
+  );
 
   const send = useCallback(
     async (raw: string) => {
       const text = raw.trim();
       if (!text || sending) return;
-
-      let conversation = active;
-      if (!conversation) {
-        conversation = { id: crypto.randomUUID(), title: makeTitle(text), messages: [], updatedAt: Date.now() };
-        const created = conversation;
-        setConversations((list) => [created, ...list]);
-        setActiveId(created.id);
-      }
-
-      const history = conversation.messages;
-      const id = conversation.id;
-      setConversations((list) => {
-        const updated = list.map((c) =>
-          c.id === id
-            ? {
-                ...c,
-                title: c.messages.length === 0 ? makeTitle(text) : c.title,
-                messages: [...c.messages, { role: "user" as const, content: text }],
-                updatedAt: Date.now(),
-              }
-            : c,
-        );
-        return updated.sort((a, b) => b.updatedAt - a.updatedAt);
-      });
-
-      await request(id, history, text);
+      const conversationId = active?.id ?? null;
+      setActive((a) => ({
+        id: a?.id ?? null,
+        title: a?.title ?? null,
+        messages: [...(a?.messages ?? []), { role: "user", content: text }],
+      }));
+      await run(text, conversationId, false);
     },
-    [active, request, sending],
+    [active?.id, run, sending],
   );
 
   const retry = useCallback(async () => {
     if (!active || sending) return;
     const last = active.messages[active.messages.length - 1];
     if (!last || last.role !== "user") return;
-    await request(active.id, active.messages.slice(0, -1), last.content);
-  }, [active, request, sending]);
+    await run(last.content, active.id, active.id !== null);
+  }, [active, run, sending]);
+
+  const stop = useCallback(() => abortRef.current?.abort(), []);
 
   const newChat = useCallback(() => {
-    setActiveId(null);
+    abortRef.current?.abort();
+    setActive(null);
     setError(null);
   }, []);
 
   const selectChat = useCallback((id: string) => {
-    setActiveId(id);
+    abortRef.current?.abort();
     setError(null);
-  }, []);
+    setLoadingConversation(true);
+    setActive({ id, title: null, messages: [] });
+    api
+      .get<{ conversation: ServerConversation; messages: { role: "USER" | "ASSISTANT"; content: string }[] }>(
+        `/chat/conversations/${id}`,
+      )
+      .then((res) =>
+        setActive({
+          id,
+          title: res.conversation.title,
+          messages: res.messages.map((m) => ({ role: m.role === "USER" ? "user" : "assistant", content: m.content })),
+        }),
+      )
+      .catch(() => setError(t("chat.error")))
+      .finally(() => setLoadingConversation(false));
+  }, [t]);
 
   const deleteChat = useCallback(
-    (id: string) => {
+    async (id: string) => {
+      await api.delete(`/chat/conversations/${id}`);
       setConversations((list) => list.filter((c) => c.id !== id));
-      if (activeId === id) setActiveId(null);
+      if (active?.id === id) setActive(null);
     },
-    [activeId],
+    [active?.id],
   );
 
   return (
     <ChatContext.Provider
-      value={{ configured, conversations, active, sending, error, send, retry, newChat, selectChat, deleteChat }}
+      value={{
+        configured,
+        conversations,
+        active,
+        loadingConversation,
+        sending,
+        error,
+        send,
+        retry,
+        stop,
+        newChat,
+        selectChat,
+        deleteChat,
+      }}
     >
       {children}
     </ChatContext.Provider>

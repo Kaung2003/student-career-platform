@@ -8,10 +8,12 @@ import { Logo } from "./Logo";
 import { Avatar } from "./ui/Avatar";
 import { ChatWidget } from "./ChatWidget";
 import { LanguageSwitcher } from "./LanguageSwitcher";
+import { NotificationBell } from "./NotificationBell";
 import { useI18n } from "../i18n/I18nContext";
 import type { MessageKey } from "../i18n/locales/en";
 import {
   ArrowLeftIcon,
+  SettingsIcon,
   AwardIcon,
   HelpCircleIcon,
   InboxIcon,
@@ -69,7 +71,10 @@ const sections: Section[] = [
   },
   {
     title: "nav.support",
-    items: [{ to: "/feedback", label: "nav.feedback", icon: MessageSquareIcon }],
+    items: [
+      { to: "/settings", label: "nav.settings", icon: SettingsIcon },
+      { to: "/feedback", label: "nav.feedback", icon: MessageSquareIcon },
+    ],
   },
 ];
 
@@ -82,6 +87,7 @@ const adminSections: Section[] = [
       { to: "/admin/feedback", label: "nav.feedbackInbox", icon: InboxIcon },
       { to: "/admin/questions", label: "nav.questions", icon: HelpCircleIcon },
       { to: "/admin/comments", label: "nav.comments", icon: MessageSquareIcon },
+      { to: "/admin/audit", label: "nav.auditLog", icon: ShieldIcon },
     ],
   },
 ];
@@ -111,14 +117,18 @@ function SidebarContent({
 
   function handleLogout() {
     onNavigate?.();
-    logout();
-    navigate("/");
+    void logout().finally(() => navigate("/"));
   }
 
   return (
     <div className="flex h-full flex-col">
       <div className="flex h-16 shrink-0 items-center gap-2 px-5">
         <Logo to={variant === "admin" ? "/admin" : "/dashboard"} onClick={onNavigate} />
+        {!onNavigate && (
+          <div className="ml-auto">
+            <NotificationBell align="left" />
+          </div>
+        )}
         {variant === "admin" && (
           <span className="rounded-md bg-slate-900 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white dark:bg-white dark:text-slate-900">
             Admin
@@ -274,6 +284,8 @@ export function AppLayout({ children, variant = "app" }: { children: ReactNode; 
             <MenuIcon className="h-5 w-5" />
           </button>
           <Logo to={variant === "admin" ? "/admin" : "/dashboard"} />
+          <div className="flex items-center">
+          <NotificationBell />
           {variant === "admin" ? (
             <span className="rounded-md bg-slate-900 px-1.5 py-0.5 text-[10px] font-bold uppercase text-white dark:bg-white dark:text-slate-900">
               Admin
@@ -283,6 +295,7 @@ export function AppLayout({ children, variant = "app" }: { children: ReactNode; 
             <SparklesIcon className="h-5 w-5" />
           </Link>
           )}
+          </div>
         </header>
 
         {fullBleed ? (
