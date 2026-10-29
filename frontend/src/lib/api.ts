@@ -20,10 +20,13 @@ export function clearLegacyToken(): void {
 
 export class ApiError extends Error {
   status: number;
+  /** Machine-readable reason from the API, e.g. "EMAIL_NOT_VERIFIED". */
+  code: string | undefined;
 
-  constructor(status: number, message: string) {
+  constructor(status: number, message: string, code?: string) {
     super(message);
     this.status = status;
+    this.code = code;
   }
 }
 
@@ -56,7 +59,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const body = await res.json().catch(() => ({}));
 
   if (!res.ok) {
-    throw new ApiError(res.status, body.error ?? "Something went wrong");
+    throw new ApiError(res.status, body.error ?? "Something went wrong", body.code);
   }
 
   return body as T;

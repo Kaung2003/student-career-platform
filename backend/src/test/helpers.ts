@@ -43,10 +43,17 @@ export async function signUp(overrides: { name?: string; email?: string; passwor
     throw new Error(`signUp failed: ${res.status} ${JSON.stringify(res.body)}`);
   }
 
-  if (overrides.role === "ADMIN") {
-    await prisma.user.update({ where: { id: res.body.user.id }, data: { role: "ADMIN" } });
+  // Skip the inbox step: mark the email confirmed, then log in for a session cookie.
+  await prisma.user.update({
+    where: { email },
+    data: { emailVerified: new Date(), ...(overrides.role === "ADMIN" ? { role: "ADMIN" } : {}) },
+  });
+  const login = await agent.post("/api/auth/login").send({ email, password });
+  if (login.status !== 200) {
+    throw new Error(`signUp login failed: ${login.status} ${JSON.stringify(login.body)}`);
   }
 
-  const profile = await prisma.studentProfile.findUniqueOrThrow({ where: { userId: res.body.user.id } });
-  return { agent, user: res.body.user as { id: string; name: string; email: string; role: string }, password, slug: profile.slug };
+  const user = login.body.user as { id: string; name: string; email: string; role: string };
+  const profile = await prisma.studentProfile.findUniqueOrThrow({ where: { userId: user.id } });
+  return { agent, user, password, slug: profile.slug };
 }

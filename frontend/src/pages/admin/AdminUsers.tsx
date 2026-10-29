@@ -150,9 +150,18 @@ export function AdminUsers() {
                     <p className="truncate font-medium text-slate-900 dark:text-white">
                       {u.name} {isMe && <span className="text-xs font-normal text-slate-400">{t("admin.users.you")}</span>}
                     </p>
-                    <p className="truncate text-xs text-slate-500 dark:text-slate-400">{u.email}</p>
+                    <p className="truncate text-xs text-slate-500 dark:text-slate-400">
+                      {u.email}
+                      {u.google && <span className="ml-1.5 rounded bg-slate-100 px-1 py-px text-[10px] font-semibold text-slate-500 dark:bg-slate-800">Google</span>}
+                    </p>
                   </div>
-                  {u.suspended ? <Badge tone="red">{t("admin.users.suspended")}</Badge> : <Badge tone="green">{t("admin.users.active")}</Badge>}
+                  {u.suspended ? (
+                    <Badge tone="red">{t("admin.users.suspended")}</Badge>
+                  ) : u.verified ? (
+                    <Badge tone="green">{t("admin.users.active")}</Badge>
+                  ) : (
+                    <Badge tone="amber">{t("admin.users.unverified")}</Badge>
+                  )}
                 </div>
                 <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">
                   {t("admin.users.colProjects")}: {u.projects} · {t("admin.users.colPractice")}: {u.attempts} · {formatDate(u.createdAt)}
@@ -236,7 +245,10 @@ export function AdminUsers() {
                             <p className="truncate font-medium text-slate-900 dark:text-white">
                               {u.name} {isMe && <span className="text-xs font-normal text-slate-400">{t("admin.users.you")}</span>}
                             </p>
-                            <p className="truncate text-xs text-slate-500 dark:text-slate-400">{u.email}</p>
+                            <p className="truncate text-xs text-slate-500 dark:text-slate-400">
+                      {u.email}
+                      {u.google && <span className="ml-1.5 rounded bg-slate-100 px-1 py-px text-[10px] font-semibold text-slate-500 dark:bg-slate-800">Google</span>}
+                    </p>
                           </div>
                         </div>
                       </td>
@@ -256,7 +268,13 @@ export function AdminUsers() {
                         </select>
                       </td>
                       <td className="px-3 py-3">
-                        {u.suspended ? <Badge tone="red">{t("admin.users.suspended")}</Badge> : <Badge tone="green">{t("admin.users.active")}</Badge>}
+                        {u.suspended ? (
+                    <Badge tone="red">{t("admin.users.suspended")}</Badge>
+                  ) : u.verified ? (
+                    <Badge tone="green">{t("admin.users.active")}</Badge>
+                  ) : (
+                    <Badge tone="amber">{t("admin.users.unverified")}</Badge>
+                  )}
                       </td>
                       <td className="px-3 py-3 text-right tabular-nums text-slate-700 dark:text-slate-300">{u.projects}</td>
                       <td className="px-3 py-3 text-right tabular-nums text-slate-700 dark:text-slate-300">{u.attempts}</td>

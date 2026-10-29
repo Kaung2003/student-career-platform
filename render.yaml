@@ -27,10 +27,21 @@ services:
         sync: false
       - key: APP_URL
         value: https://student-career-platform.netlify.app
-      # Password-reset emails via resend.com (optional).
+      # Sign-up confirmation and password-reset emails: Gmail SMTP (app password) or Resend.
+      - key: SMTP_HOST
+        value: smtp.gmail.com
+      - key: SMTP_PORT
+        value: "465"
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
       - key: RESEND_API_KEY
         sync: false
       - key: EMAIL_FROM
+        sync: false
+      # "Sign in with Google" OAuth client ID.
+      - key: GOOGLE_CLIENT_ID
         sync: false
       # Comma-separated emails that are promoted to admin when they log in.
       - key: ADMIN_EMAILS

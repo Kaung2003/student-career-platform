@@ -4,6 +4,8 @@ import { useAuth } from "../context/AuthContext";
 import { useI18n } from "../i18n/I18nContext";
 import { ApiError } from "../lib/api";
 import { AuthLayout } from "../components/AuthLayout";
+import { GoogleSignInButton } from "../components/GoogleSignInButton";
+import { CheckEmailNotice } from "../components/CheckEmailNotice";
 import { Field, inputClass } from "../components/ui/Field";
 import { Button } from "../components/ui/Button";
 
@@ -17,17 +19,29 @@ export function Login() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [unverified, setUnverified] = useState<string | null>(null);
 
   async function handleSubmit(e: SubmitEvent) {
     e.preventDefault();
     setError(null);
+    setUnverified(null);
     setSubmitting(true);
 
     try {
       await login(email, password);
       navigate(redirectTo, { replace: true });
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("auth.loginFailed"));
+      if (err instanceof ApiError && err.code === "EMAIL_NOT_VERIFIED") {
+        setUnverified(email.trim());
+        return;
+      }
+      setError(
+        err instanceof ApiError && err.code === "USE_GOOGLE"
+          ? t("auth.useGoogle")
+          : err instanceof ApiError
+            ? err.message
+            : t("auth.loginFailed"),
+      );
     } finally {
       setSubmitting(false);
     }
@@ -35,6 +49,12 @@ export function Login() {
 
   return (
     <AuthLayout title={t("auth.loginTitle")} subtitle={t("auth.loginSubtitle")}>
+      <GoogleSignInButton redirectTo={redirectTo} />
+      {unverified && (
+        <div className="mb-4">
+          <CheckEmailNotice email={unverified} compact />
+        </div>
+      )}
       <form onSubmit={handleSubmit} className="space-y-4">
         <Field label={t("auth.email")}>
           <input

@@ -1,22 +1,24 @@
 import { useState, type SubmitEvent } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useI18n } from "../i18n/I18nContext";
 import { formatNodes } from "../i18n/formatNodes";
 import { ApiError } from "../lib/api";
 import { AuthLayout } from "../components/AuthLayout";
+import { GoogleSignInButton } from "../components/GoogleSignInButton";
+import { CheckEmailNotice } from "../components/CheckEmailNotice";
 import { Field, inputClass } from "../components/ui/Field";
 import { Button } from "../components/ui/Button";
 
 export function Register() {
   const { register } = useAuth();
-  const navigate = useNavigate();
   const { t } = useI18n();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [sentTo, setSentTo] = useState<string | null>(null);
 
   async function handleSubmit(e: SubmitEvent) {
     e.preventDefault();
@@ -24,8 +26,7 @@ export function Register() {
     setSubmitting(true);
 
     try {
-      await register(name, email, password);
-      navigate("/dashboard");
+      setSentTo(await register(name, email, password));
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t("auth.registerFailed"));
     } finally {
@@ -35,6 +36,11 @@ export function Register() {
 
   return (
     <AuthLayout title={t("auth.registerTitle")} subtitle={t("auth.registerSubtitle")}>
+      {sentTo ? (
+        <CheckEmailNotice email={sentTo} />
+      ) : (
+      <>
+      <GoogleSignInButton />
       <form onSubmit={handleSubmit} className="space-y-4">
         <Field label={t("auth.name")}>
           <input
@@ -79,6 +85,8 @@ export function Register() {
           {submitting ? t("auth.creatingAccount") : t("auth.register")}
         </Button>
       </form>
+      </>
+      )}
 
       <p className="mt-4 text-center text-xs text-slate-500 dark:text-slate-400">
         {formatNodes(t("auth.agree"), {

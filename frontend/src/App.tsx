@@ -17,6 +17,7 @@ const Login = named(() => import("./pages/Login"), "Login");
 const Register = named(() => import("./pages/Register"), "Register");
 const ForgotPassword = named(() => import("./pages/ForgotPassword"), "ForgotPassword");
 const ResetPassword = named(() => import("./pages/ResetPassword"), "ResetPassword");
+const VerifyEmail = named(() => import("./pages/VerifyEmail"), "VerifyEmail");
 const Dashboard = named(() => import("./pages/Dashboard"), "Dashboard");
 const Assistant = named(() => import("./pages/Assistant"), "Assistant");
 const Profile = named(() => import("./pages/Profile"), "Profile");
@@ -61,6 +62,7 @@ function App() {
                     <Route path="/register" element={<Register />} />
                     <Route path="/forgot-password" element={<ForgotPassword />} />
                     <Route path="/reset-password" element={<ResetPassword />} />
+                    <Route path="/verify-email" element={<VerifyEmail />} />
                     <Route path="/privacy" element={<Privacy />} />
                     <Route path="/terms" element={<Terms />} />
                     <Route path="/p/:slug" element={<PublicPortfolio />} />

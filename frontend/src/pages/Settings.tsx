@@ -61,14 +61,17 @@ export function Settings() {
     }
   }
 
+  const hasPassword = user?.hasPassword ?? true;
+
   async function changePassword(e: SubmitEvent) {
     e.preventDefault();
     setPasswordError(null);
     setSavingPassword(true);
     try {
-      await api.post("/account/password", { currentPassword, newPassword });
+      await api.post("/account/password", hasPassword ? { currentPassword, newPassword } : { newPassword });
       setCurrentPassword("");
       setNewPassword("");
+      if (user && !hasPassword) updateUser({ ...user, hasPassword: true });
       toast(t("settings.passwordChanged"));
     } catch (err) {
       setPasswordError(err instanceof ApiError ? err.message : t("common.somethingWrong"));
@@ -100,7 +103,7 @@ export function Settings() {
     setDeleteError(null);
     setDeleting(true);
     try {
-      await api.delete("/account", { password: deletePassword });
+      await api.delete("/account", hasPassword ? { password: deletePassword } : { confirmEmail: deletePassword });
       updateUserAfterDelete();
     } catch (err) {
       setDeleteError(err instanceof ApiError ? err.message : t("common.somethingWrong"));
@@ -135,18 +138,23 @@ export function Settings() {
         </form>
       </Section>
 
-      <Section title={t("settings.passwordTitle")} description={t("settings.passwordDescription")}>
+      <Section
+        title={hasPassword ? t("settings.passwordTitle") : t("settings.setPasswordTitle")}
+        description={hasPassword ? t("settings.passwordDescription") : t("settings.setPasswordDescription")}
+      >
         <form onSubmit={changePassword} className="space-y-4">
-          <Field label={t("settings.currentPassword")}>
-            <input
-              type="password"
-              required
-              autoComplete="current-password"
-              value={currentPassword}
-              onChange={(e) => setCurrentPassword(e.target.value)}
-              className={inputClass}
-            />
-          </Field>
+          {hasPassword && (
+            <Field label={t("settings.currentPassword")}>
+              <input
+                type="password"
+                required
+                autoComplete="current-password"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                className={inputClass}
+              />
+            </Field>
+          )}
           <Field label={t("auth.newPassword")} hint={t("auth.passwordPlaceholder")}>
             <input
               type="password"
@@ -161,7 +169,7 @@ export function Settings() {
           {passwordError && <p className="text-sm text-red-600 dark:text-red-400">{passwordError}</p>}
           <div className="flex justify-end">
             <Button type="submit" disabled={savingPassword}>
-              {savingPassword ? t("common.saving") : t("settings.changePassword")}
+              {savingPassword ? t("common.saving") : hasPassword ? t("settings.changePassword") : t("settings.setPassword")}
             </Button>
           </div>
         </form>
@@ -204,13 +212,15 @@ export function Settings() {
         }
       >
         <form id="delete-account-form" onSubmit={deleteAccount} className="space-y-4">
-          <p className="text-sm text-slate-600 dark:text-slate-400">{t("settings.deleteConfirmMessage")}</p>
-          <Field label={t("auth.password")}>
+          <p className="text-sm text-slate-600 dark:text-slate-400">
+            {hasPassword ? t("settings.deleteConfirmMessage") : t("settings.deleteConfirmEmail", { email: user?.email ?? "" })}
+          </p>
+          <Field label={hasPassword ? t("auth.password") : t("settings.email")}>
             <input
-              type="password"
+              type={hasPassword ? "password" : "email"}
               required
               autoFocus
-              autoComplete="current-password"
+              autoComplete={hasPassword ? "current-password" : "off"}
               value={deletePassword}
               onChange={(e) => setDeletePassword(e.target.value)}
               className={inputClass}

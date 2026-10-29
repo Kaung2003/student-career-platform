@@ -5,6 +5,8 @@ export interface User {
   name: string;
   email: string;
   role: Role;
+  /** False for accounts that only sign in with Google. */
+  hasPassword: boolean;
 }
 
 export interface Project {
@@ -126,6 +128,8 @@ export interface AdminUser {
   email: string;
   role: Role;
   suspended: boolean;
+  verified: boolean;
+  google: boolean;
   createdAt: string;
   slug: string | null;
   school: string | null;

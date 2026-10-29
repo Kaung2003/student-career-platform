@@ -12,28 +12,66 @@ vi.mock("../lib/email.js", async (importOriginal) => ({
   },
 }));
 
+let googleIdentity: { googleId: string; email: string; name: string } | null = null;
+vi.mock("../lib/google.js", () => ({
+  googleClientId: () => "test-client-id.apps.googleusercontent.com",
+  verifyGoogleCredential: async () => googleIdentity,
+}));
+
+const linkToken = (text: string) => /token=([\w-]+)/.exec(text)?.[1];
+
 beforeEach(async () => {
   await resetDatabase();
   sentEmails.length = 0;
 });
 
-describe("registration", () => {
-  it("creates an account, a portfolio, and an httpOnly session cookie", async () => {
+describe("registration with a password", () => {
+  it("creates the account and portfolio but requires confirming the email first", async () => {
     const res = await request(app)
       .post("/api/auth/register")
       .send({ name: "Ada Lovelace", email: "Ada@Example.test", password: "analytical-engine" });
 
     expect(res.status).toBe(201);
-    expect(res.body.user).toMatchObject({ name: "Ada Lovelace", email: "ada@example.test", role: "STUDENT" });
-    expect(res.body.token).toBeUndefined();
-
-    const cookie = res.headers["set-cookie"]?.[0] ?? "";
-    expect(cookie).toMatch(/^scp_session=/);
-    expect(cookie).toMatch(/HttpOnly/i);
-    expect(cookie).toMatch(/SameSite=Lax/i);
+    expect(res.body).toEqual({ verificationRequired: true, email: "ada@example.test" });
+    expect(res.headers["set-cookie"]).toBeUndefined();
 
     const profile = await prisma.studentProfile.findFirst({ where: { user: { email: "ada@example.test" } } });
     expect(profile?.slug).toBe("ada-lovelace");
+
+    expect(sentEmails).toHaveLength(1);
+    expect(sentEmails[0]!.to).toBe("ada@example.test");
+    expect(sentEmails[0]!.text).toMatch(/verify-email\?token=/);
+
+    const login = await request(app).post("/api/auth/login").send({ email: "ada@example.test", password: "analytical-engine" });
+    expect(login.status).toBe(403);
+    expect(login.body.code).toBe("EMAIL_NOT_VERIFIED");
+  });
+
+  it("confirms the email from the link and logs the user in", async () => {
+    await request(app).post("/api/auth/register").send({ name: "Grace", email: "grace@example.test", password: "cobol-forever" });
+    const token = linkToken(sentEmails[0]!.text);
+
+    const agent = request.agent(app);
+    const verify = await agent.post("/api/auth/verify-email").send({ token });
+    expect(verify.status).toBe(200);
+    expect(verify.body.user).toMatchObject({ email: "grace@example.test", hasPassword: true });
+    expect(verify.headers["set-cookie"]?.[0]).toMatch(/^scp_session=.*HttpOnly/i);
+    expect((await agent.get("/api/auth/me")).status).toBe(200);
+
+    // The link only works once.
+    expect((await request(app).post("/api/auth/verify-email").send({ token })).status).toBe(400);
+
+    const login = await request(app).post("/api/auth/login").send({ email: "grace@example.test", password: "cobol-forever" });
+    expect(login.status).toBe(200);
+  });
+
+  it("resends the link only for unconfirmed accounts", async () => {
+    await request(app).post("/api/auth/register").send({ name: "Lin", email: "lin@example.test", password: "long-enough-pw" });
+    await request(app).post("/api/auth/resend-verification").send({ email: "lin@example.test" }).expect(200);
+    expect(sentEmails).toHaveLength(2);
+
+    await request(app).post("/api/auth/resend-verification").send({ email: "nobody@example.test" }).expect(200);
+    expect(sentEmails).toHaveLength(2);
   });
 
   it("rejects duplicate emails regardless of letter case", async () => {
@@ -59,6 +97,55 @@ describe("registration", () => {
       .post("/api/auth/register")
       .send({ name: "Mallory", email: "m@example.test", password: "long-enough-pw", role: "ADMIN" });
     expect(res.status).toBe(400);
+  });
+});
+
+describe("sign in with Google", () => {
+  it("creates a verified account with no password and logs in", async () => {
+    googleIdentity = { googleId: "g-123", email: "alan@gmail.com", name: "Alan Turing" };
+    const agent = request.agent(app);
+
+    const res = await agent.post("/api/auth/google").send({ credential: "x".repeat(40) });
+    expect(res.status).toBe(200);
+    expect(res.body.user).toMatchObject({ email: "alan@gmail.com", name: "Alan Turing", hasPassword: false });
+    expect((await agent.get("/api/auth/me")).status).toBe(200);
+
+    const user = await prisma.user.findUniqueOrThrow({ where: { email: "alan@gmail.com" } });
+    expect(user.emailVerified).not.toBeNull();
+    expect(await prisma.studentProfile.count({ where: { userId: user.id } })).toBe(1);
+
+    // Password login explains that this account uses Google.
+    const pw = await request(app).post("/api/auth/login").send({ email: "alan@gmail.com", password: "anything-here" });
+    expect(pw.body.code).toBe("USE_GOOGLE");
+  });
+
+  it("links to an existing password account with the same email, and confirms it", async () => {
+    await request(app).post("/api/auth/register").send({ name: "Kat", email: "kat@gmail.com", password: "long-enough-pw" });
+    googleIdentity = { googleId: "g-kat", email: "kat@gmail.com", name: "Katherine" };
+
+    const res = await request(app).post("/api/auth/google").send({ credential: "x".repeat(40) });
+    expect(res.status).toBe(200);
+    expect(res.body.user).toMatchObject({ email: "kat@gmail.com", name: "Kat", hasPassword: true });
+    expect(await prisma.user.count({ where: { email: "kat@gmail.com" } })).toBe(1);
+
+    // Google proved the address, so the password login now works too.
+    const login = await request(app).post("/api/auth/login").send({ email: "kat@gmail.com", password: "long-enough-pw" });
+    expect(login.status).toBe(200);
+  });
+
+  it("rejects tokens Google won't vouch for", async () => {
+    googleIdentity = null;
+    const res = await request(app).post("/api/auth/google").send({ credential: "x".repeat(40) });
+    expect(res.status).toBe(401);
+  });
+
+  it("lets a Google-only account set a password and delete itself by typing its email", async () => {
+    googleIdentity = { googleId: "g-del", email: "del@gmail.com", name: "Del" };
+    const agent = request.agent(app);
+    await agent.post("/api/auth/google").send({ credential: "x".repeat(40) }).expect(200);
+
+    expect((await agent.delete("/api/account").send({ confirmEmail: "wrong@gmail.com" })).status).toBe(400);
+    expect((await agent.delete("/api/account").send({ confirmEmail: "DEL@gmail.com" })).status).toBe(204);
   });
 });
 
@@ -106,6 +193,7 @@ describe("login and sessions", () => {
 describe("password reset", () => {
   it("emails a one-time link that sets a new password", async () => {
     const { user } = await signUp();
+    sentEmails.length = 0; // ignore the sign-up confirmation email
 
     const forgot = await request(app).post("/api/auth/forgot-password").send({ email: user.email });
     expect(forgot.status).toBe(200);

@@ -710,6 +710,28 @@ export const en = {
   "admin.audit.action.question.updated": "Edited question",
   "admin.audit.action.question.deleted": "Deleted question",
   "admin.audit.action.comment.deleted": "Removed comment",
+
+  // Email verification & Google sign-in
+  "auth.orWithEmail": "or continue with email",
+  "auth.googleFailed": "Google sign-in failed. Please try again.",
+  "auth.googleUnavailable": "Google sign-in couldn't load. Check your connection or use email instead.",
+  "auth.useGoogle": "This account uses Google. Click “Continue with Google” above.",
+  "auth.checkInboxTitle": "Check your inbox",
+  "auth.checkInboxBody": "We sent a confirmation link to {email}. Click it to activate your account, then you can log in.",
+  "auth.resend": "Resend email",
+  "auth.resendIn": "Resend in {seconds}s",
+  "auth.resent": "Sent again.",
+  "auth.checkSpam": "Can't find it? Check your spam or promotions folder.",
+  "auth.verifyTitle": "Confirming your email",
+  "auth.verifying": "One moment while we confirm your email...",
+  "auth.verifyFailedSubtitle": "We couldn't confirm your email.",
+  "auth.verifyInvalid": "This confirmation link is invalid or has expired.",
+  "auth.verifyHelp": "Log in with your email and password to get a new confirmation link.",
+  "settings.setPasswordTitle": "Add a password",
+  "settings.setPasswordDescription": "You sign in with Google. Add a password to also log in with your email.",
+  "settings.setPassword": "Set password",
+  "settings.deleteConfirmEmail": "Type your email address ({email}) to confirm. Everything is deleted immediately and can't be recovered.",
+  "admin.users.unverified": "Not confirmed",
 } as const;
 
 export type MessageKey = keyof typeof en;

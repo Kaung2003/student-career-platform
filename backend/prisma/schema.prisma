@@ -56,8 +56,12 @@ model User {
   id        String   @id @default(cuid())
   name      String
   email     String   @unique
-  password  String
+  // Null for accounts that only ever signed in with Google.
+  password  String?
   role      Role     @default(STUDENT)
+  // When the email address was confirmed (verification link or Google). Null = can't log in yet.
+  emailVerified DateTime?
+  googleId      String?   @unique
   suspended Boolean  @default(false)
 
   profile           StudentProfile?
@@ -66,6 +70,7 @@ model User {
   feedback          Feedback[]
   comments          Comment[]
   resetTokens       PasswordResetToken[]
+  verifyTokens      EmailVerificationToken[]
   conversations     ChatConversation[]
   notifications     Notification[]
   auditLogs         AuditLog[]
@@ -197,6 +202,19 @@ model PasswordResetToken {
   tokenHash String    @unique
   expiresAt DateTime
   usedAt    DateTime?
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model EmailVerificationToken {
+  id        String   @id @default(cuid())
+  tokenHash String   @unique
+  expiresAt DateTime
 
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId String

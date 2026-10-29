@@ -6,7 +6,10 @@ interface AuthContextValue {
   user: User | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (name: string, email: string, password: string) => Promise<void>;
+  /** Creates the account and emails a confirmation link; returns the address it was sent to. */
+  register: (name: string, email: string, password: string) => Promise<string>;
+  loginWithGoogle: (credential: string) => Promise<void>;
+  verifyEmail: (token: string) => Promise<void>;
   logout: () => Promise<void>;
   updateUser: (user: User) => void;
 }
@@ -43,7 +46,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function register(name: string, email: string, password: string) {
-    const res = await api.post<AuthResponse>("/auth/register", { name, email, password });
+    const res = await api.post<{ verificationRequired: true; email: string }>("/auth/register", { name, email, password });
+    return res.email;
+  }
+
+  async function loginWithGoogle(credential: string) {
+    const res = await api.post<AuthResponse>("/auth/google", { credential });
+    clearLegacyToken();
+    setUser(res.user);
+  }
+
+  async function verifyEmail(token: string) {
+    const res = await api.post<AuthResponse>("/auth/verify-email", { token });
     clearLegacyToken();
     setUser(res.user);
   }
@@ -58,7 +72,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout, updateUser: setUser }}>{children}</AuthContext.Provider>
+    <AuthContext.Provider value={{ user, loading, login, register, loginWithGoogle, verifyEmail, logout, updateUser: setUser }}>{children}</AuthContext.Provider>
   );
 }
 

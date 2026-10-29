@@ -5,6 +5,8 @@ export class HttpError extends Error {
   constructor(
     public readonly status: number,
     message: string,
+    /** Machine-readable reason the client can react to, e.g. "EMAIL_NOT_VERIFIED". */
+    public readonly code?: string,
   ) {
     super(message);
   }

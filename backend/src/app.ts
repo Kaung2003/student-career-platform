@@ -81,7 +81,7 @@ export function createApp() {
 
   app.use((err: unknown, req: Request, res: Response, _next: NextFunction) => {
     if (err instanceof HttpError) {
-      res.status(err.status).json({ error: err.message });
+      res.status(err.status).json({ error: err.message, ...(err.code ? { code: err.code } : {}) });
       return;
     }
 
