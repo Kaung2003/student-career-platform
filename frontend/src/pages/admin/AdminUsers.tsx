@@ -137,7 +137,80 @@ export function AdminUsers() {
       ) : users.length === 0 ? (
         <EmptyState icon={<UsersIcon className="h-6 w-6" />} title={t("admin.users.emptyTitle")} description={t("admin.users.emptyDescription")} />
       ) : (
-        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+        <>
+        {/* Phones: one card per user, every action reachable without sideways scrolling. */}
+        <ul className="space-y-3 sm:hidden">
+          {users.map((u) => {
+            const isMe = u.id === me?.id;
+            return (
+              <li key={u.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                <div className="flex items-center gap-3">
+                  <Avatar name={u.name} size="sm" />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-medium text-slate-900 dark:text-white">
+                      {u.name} {isMe && <span className="text-xs font-normal text-slate-400">{t("admin.users.you")}</span>}
+                    </p>
+                    <p className="truncate text-xs text-slate-500 dark:text-slate-400">{u.email}</p>
+                  </div>
+                  {u.suspended ? <Badge tone="red">{t("admin.users.suspended")}</Badge> : <Badge tone="green">{t("admin.users.active")}</Badge>}
+                </div>
+                <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">
+                  {t("admin.users.colProjects")}: {u.projects} · {t("admin.users.colPractice")}: {u.attempts} · {formatDate(u.createdAt)}
+                </p>
+                <div className="mt-3 flex items-center gap-2 border-t border-slate-100 pt-3 dark:border-slate-800">
+                  <select
+                    value={u.role}
+                    disabled={isMe}
+                    onChange={(e) => void changeRole(u, e.target.value as Role)}
+                    aria-label={t("admin.users.roleFor", { name: u.name })}
+                    className="min-w-0 flex-1 rounded-lg border border-slate-200 bg-white px-2 py-2 text-sm font-medium text-slate-700 disabled:opacity-60 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                  >
+                    {ROLES.map((r) => (
+                      <option key={r} value={r}>
+                        {roleLabel(r)}
+                      </option>
+                    ))}
+                  </select>
+                  {u.slug && (
+                    <a
+                      href={`/p/${u.slug}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      aria-label={t("admin.users.viewPortfolio")}
+                      className="rounded-lg border border-slate-200 p-2.5 text-slate-500 dark:border-slate-700"
+                    >
+                      <ExternalLinkIcon className="h-4 w-4" />
+                    </a>
+                  )}
+                  {!isMe && (
+                    <>
+                      <button
+                        onClick={() => void toggleSuspend(u)}
+                        aria-label={u.suspended ? t("admin.users.reactivate") : t("admin.users.suspend")}
+                        className={`rounded-lg border p-2.5 ${
+                          u.suspended
+                            ? "border-emerald-200 text-emerald-600 dark:border-emerald-500/30 dark:text-emerald-400"
+                            : "border-slate-200 text-amber-600 dark:border-slate-700 dark:text-amber-400"
+                        }`}
+                      >
+                        {u.suspended ? <CheckIcon className="h-4 w-4" /> : <BanIcon className="h-4 w-4" />}
+                      </button>
+                      <button
+                        onClick={() => void remove(u)}
+                        aria-label={t("admin.users.deleteUser")}
+                        className="rounded-lg border border-slate-200 p-2.5 text-red-600 dark:border-slate-700 dark:text-red-400"
+                      >
+                        <TrashIcon className="h-4 w-4" />
+                      </button>
+                    </>
+                  )}
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+
+        <div className="hidden overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm sm:block dark:border-slate-800 dark:bg-slate-900">
           <div className="overflow-x-auto">
             <table className="w-full min-w-[760px] text-sm">
               <thead className="border-b border-slate-200 bg-slate-50 text-left text-xs font-medium uppercase tracking-wider text-slate-500 dark:border-slate-800 dark:bg-slate-800/50 dark:text-slate-400">
@@ -235,6 +308,7 @@ export function AdminUsers() {
             {t("admin.users.showing", { count: users.length })}
           </p>
         </div>
+        </>
       )}
     </div>
   );

@@ -75,6 +75,7 @@ export function InterviewPractice() {
   const [timing, setTiming] = useState(false);
   const [expandedAttempt, setExpandedAttempt] = useState<string | null>(null);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
+  const practiceRef = useRef<HTMLDivElement>(null);
   const voiceSupported = getSpeechRecognition() !== null;
 
   useEffect(() => {
@@ -119,6 +120,10 @@ export function InterviewPractice() {
     setError(null);
     setSeconds(0);
     setTiming(false);
+    // On phones the answer panel sits below the long question list; bring it into view.
+    if (window.matchMedia("(max-width: 1023px)").matches) {
+      requestAnimationFrame(() => practiceRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
+    }
   }
 
   function randomQuestion() {
@@ -213,7 +218,7 @@ export function InterviewPractice() {
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
         <div className="lg:col-span-2">
-          <div className="mb-3 inline-flex flex-wrap gap-1 rounded-xl bg-slate-100 p-1 dark:bg-slate-900">
+          <div className="scroll-row mb-3 w-fit gap-1 rounded-xl bg-slate-100 p-1 dark:bg-slate-900">
             {CATEGORIES.map((c) => (
               <button
                 key={c}
@@ -262,7 +267,7 @@ export function InterviewPractice() {
           </div>
         </div>
 
-        <div className="lg:col-span-3">
+        <div ref={practiceRef} className="scroll-mt-20 lg:col-span-3">
           {!selected ? (
             <Card className="flex h-full min-h-[24rem] flex-col items-center justify-center text-center">
               <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400">
@@ -305,9 +310,9 @@ export function InterviewPractice() {
                 placeholder={t("interview.answerPlaceholder")}
                 className={`${inputClass} mt-4`}
               />
-              <div className="mt-1.5 flex justify-between text-xs text-slate-400 dark:text-slate-500">
-                <span>{t("interview.words", { count: wordCount })}</span>
-                <span>{t("interview.aim")}</span>
+              <div className="mt-1.5 flex justify-between gap-3 text-xs text-slate-400 dark:text-slate-500">
+                <span className="shrink-0 whitespace-nowrap">{t("interview.words", { count: wordCount })}</span>
+                <span className="text-right">{t("interview.aim")}</span>
               </div>
 
               <div className="mt-4 flex flex-wrap items-center gap-3">

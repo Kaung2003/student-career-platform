@@ -72,7 +72,7 @@ export function AdminFeedback() {
       <PageHeader title={t("admin.feedback.title")} description={t("admin.feedback.description")} />
 
       <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="inline-flex flex-wrap gap-1 rounded-xl bg-slate-100 p-1 dark:bg-slate-900">
+        <div className="scroll-row w-fit gap-1 rounded-xl bg-slate-100 p-1 dark:bg-slate-900">
           {(["", ...STATUSES] as const).map((s) => (
             <button
               key={s || "ALL"}

@@ -68,3 +68,63 @@ h3 {
 :lang(ja) p {
   word-break: auto-phrase;
 }
+
+/* ---------- Mobile polish ---------- */
+
+/* Nothing may make the page wider than the screen (no sideways dragging on phones).
+   `clip` (unlike `hidden`) keeps position: sticky working. */
+html,
+body {
+  overflow-x: clip;
+}
+
+/* No grey flash when tapping links and buttons on mobile. */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button,
+a,
+select,
+label {
+  touch-action: manipulation;
+}
+
+/* iOS zooms the page when a field with text under 16px is focused; keep fields at 16px on phones. */
+@media (max-width: 639px) {
+  input:not([type="checkbox"]):not([type="radio"]),
+  textarea,
+  select {
+    font-size: 16px;
+  }
+}
+
+/* Controls revealed on hover stay visible on touch screens, which can't hover. */
+@media (hover: none) {
+  .hover-reveal {
+    opacity: 1 !important;
+  }
+}
+
+/* Room for the iPhone home indicator. */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Horizontal pill/tab rows scroll instead of overflowing. */
+.scroll-row {
+  display: flex;
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.scroll-row::-webkit-scrollbar {
+  display: none;
+}
+
+.scroll-row > * {
+  flex-shrink: 0;
+  white-space: nowrap;
+}

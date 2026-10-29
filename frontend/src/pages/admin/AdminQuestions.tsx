@@ -109,7 +109,7 @@ export function AdminQuestions() {
         }
       />
 
-      <div className="mb-5 inline-flex flex-wrap gap-1 rounded-xl bg-slate-100 p-1 dark:bg-slate-900">
+      <div className="mb-5 scroll-row w-fit gap-1 rounded-xl bg-slate-100 p-1 dark:bg-slate-900">
         {(["", ...CATEGORIES] as const).map((c) => (
           <button
             key={c || "ALL"}

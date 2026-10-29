@@ -64,7 +64,7 @@ function Message({ message, compact, userName }: { message: ChatMessage; compact
         >
           <Markdown content={message.content} />
         </div>
-        <div className="mt-1 opacity-0 transition group-hover:opacity-100">
+        <div className="hover-reveal mt-1 opacity-0 transition group-hover:opacity-100">
           <CopyButton text={message.content} />
         </div>
       </div>
@@ -103,7 +103,8 @@ export function ChatComposer({ compact = false, autoFocus = false }: { compact?:
   }, [input]);
 
   useEffect(() => {
-    if (autoFocus) textareaRef.current?.focus();
+    // Only on devices with a mouse: on phones, focusing pops the keyboard over half the screen.
+    if (autoFocus && window.matchMedia("(hover: hover)").matches) textareaRef.current?.focus();
   }, [autoFocus]);
 
   function submit() {
@@ -195,7 +196,7 @@ export function ChatThread({ compact = false }: { compact?: boolean }) {
   const prompts = compact ? SUGGESTED_PROMPTS.slice(0, 3) : SUGGESTED_PROMPTS;
 
   return (
-    <div ref={scrollRef} className={`flex-1 overflow-y-auto ${compact ? "px-4 py-4" : "px-4 py-8 sm:px-6"}`}>
+    <div ref={scrollRef} className={`flex-1 overflow-y-auto overscroll-contain ${compact ? "px-4 py-4" : "px-4 py-8 sm:px-6"}`}>
       <div className={`mx-auto space-y-5 ${compact ? "" : "max-w-3xl"}`}>
         {loadingConversation && (
           <div className="flex justify-center py-10">

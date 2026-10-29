@@ -71,7 +71,7 @@ function History({ onPick }: { onPick?: () => void }) {
                 if (ok) void deleteChat(c.id);
               }}
               aria-label={t("assistant.deleteConversation")}
-              className="rounded p-1 text-slate-400 opacity-0 transition hover:text-red-600 group-hover:opacity-100 dark:hover:text-red-400"
+              className="hover-reveal rounded p-1.5 text-slate-400 opacity-0 transition hover:text-red-600 group-hover:opacity-100 dark:hover:text-red-400"
             >
               <TrashIcon className="h-3.5 w-3.5" />
             </button>
@@ -88,7 +88,7 @@ export function Assistant() {
   const [historyOpen, setHistoryOpen] = useState(false);
 
   return (
-    <div className="flex h-[calc(100vh-3.5rem)] lg:h-screen">
+    <div className="flex h-[calc(100dvh-3.5rem)] lg:h-dvh">
       <aside className="hidden w-64 shrink-0 border-r border-slate-200 bg-white xl:block dark:border-slate-800 dark:bg-slate-900/50">
         <History />
       </aside>
@@ -96,7 +96,7 @@ export function Assistant() {
       {historyOpen && (
         <div className="fixed inset-0 z-40 xl:hidden">
           <div className="animate-fade-in absolute inset-0 bg-slate-950/50" onClick={() => setHistoryOpen(false)} />
-          <aside className="animate-pop-in absolute inset-y-0 right-0 w-72 max-w-[85vw] bg-white shadow-xl dark:bg-slate-900">
+          <aside className="animate-pop-in absolute inset-y-0 right-0 flex w-72 max-w-[85vw] flex-col overscroll-contain bg-white pb-safe shadow-xl dark:bg-slate-900">
             <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3 dark:border-slate-800">
               <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">{t("assistant.conversations")}</p>
               <button onClick={() => setHistoryOpen(false)} aria-label={t("common.close")} className="rounded p-1 text-slate-500">
@@ -128,7 +128,7 @@ export function Assistant() {
 
         <ChatThread />
 
-        <div className="shrink-0 px-4 pb-4 pt-2 sm:px-6">
+        <div className="shrink-0 px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-2 sm:px-6">
           <div className="mx-auto max-w-3xl">
             <ChatComposer autoFocus />
           </div>

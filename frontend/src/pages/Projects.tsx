@@ -190,7 +190,7 @@ export function Projects() {
                     {project.title.charAt(0).toUpperCase()}
                   </div>
                 )}
-                <div className="absolute right-2 top-2 flex gap-1 opacity-100 transition sm:opacity-0 sm:group-hover:opacity-100">
+                <div className="hover-reveal absolute right-2 top-2 flex gap-1 opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100">
                   <button
                     onClick={() => openEdit(project)}
                     aria-label={t("projects.edit")}

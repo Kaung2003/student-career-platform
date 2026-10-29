@@ -5,7 +5,7 @@ export function Logo({ to = "/", onClick, inverted = false }: { to?: string; onC
     <Link
       to={to}
       onClick={onClick}
-      className={`flex items-center gap-2 text-lg font-semibold tracking-tight ${
+      className={`flex shrink-0 items-center gap-2 text-base font-semibold tracking-tight sm:text-lg ${
         inverted ? "text-white" : "text-slate-900 dark:text-slate-100"
       }`}
     >

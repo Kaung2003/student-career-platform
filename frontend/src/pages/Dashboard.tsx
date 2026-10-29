@@ -155,16 +155,16 @@ export function Dashboard() {
           </h1>
         </div>
         {profile && (
-          <div className="flex flex-wrap gap-2">
+          <div className="grid grid-cols-3 gap-2 sm:flex sm:flex-wrap">
             <Link
               to="/resume"
-              className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
+              className="inline-flex flex-col items-center justify-center gap-1 rounded-lg border border-slate-300 bg-white px-2 py-2 text-center text-xs font-medium text-slate-700 sm:flex-row sm:gap-2 sm:px-3 sm:text-sm transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
             >
               <FileTextIcon className="h-4 w-4" /> {t("resume.build")}
             </Link>
             <button
               onClick={copyLink}
-              className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
+              className="inline-flex flex-col items-center justify-center gap-1 rounded-lg border border-slate-300 bg-white px-2 py-2 text-center text-xs font-medium text-slate-700 sm:flex-row sm:gap-2 sm:px-3 sm:text-sm transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
             >
               <CopyIcon className="h-4 w-4" /> {t("dashboard.copyLink")}
             </button>
@@ -172,7 +172,7 @@ export function Dashboard() {
               href={`/p/${profile.slug}`}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white shadow-sm shadow-blue-600/20 transition hover:bg-blue-700"
+              className="inline-flex flex-col-reverse items-center justify-center gap-1 rounded-lg bg-blue-600 px-2 py-2 text-center text-xs font-medium text-white sm:flex-row sm:gap-2 sm:px-3 sm:text-sm shadow-sm shadow-blue-600/20 transition hover:bg-blue-700"
             >
               {t("dashboard.viewPortfolio")} <ExternalLinkIcon className="h-4 w-4" />
             </a>

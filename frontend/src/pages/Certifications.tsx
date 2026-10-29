@@ -175,7 +175,7 @@ export function Certifications() {
       </div>
 
       {certifications.length > 0 && (
-        <div className="mb-6 inline-flex flex-wrap gap-1 rounded-xl bg-slate-100 p-1 dark:bg-slate-900">
+        <div className="mb-6 scroll-row w-fit gap-1 rounded-xl bg-slate-100 p-1 dark:bg-slate-900">
           {(["ALL", ...STATUSES] as const).map((s) => (
             <button
               key={s}

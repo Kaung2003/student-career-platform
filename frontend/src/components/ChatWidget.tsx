@@ -11,9 +11,9 @@ export function ChatWidget() {
   const { t } = useI18n();
 
   return (
-    <div className="fixed bottom-5 right-5 z-40 flex flex-col items-end">
+    <div className="fixed bottom-[calc(1rem+env(safe-area-inset-bottom))] right-4 z-40 flex flex-col items-end sm:bottom-5 sm:right-5">
       {open && (
-        <div className="animate-pop-in mb-3 flex h-[min(34rem,calc(100vh-7rem))] w-[calc(100vw-2.5rem)] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl sm:w-[24rem] dark:border-slate-800 dark:bg-slate-900">
+        <div className="animate-pop-in mb-3 flex h-[min(34rem,calc(100dvh-6.5rem))] w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl sm:w-[24rem] dark:border-slate-800 dark:bg-slate-900">
           <div className="flex items-center gap-3 bg-gradient-to-r from-violet-600 to-blue-600 px-4 py-3 text-white">
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20">
               <SparklesIcon className="h-4 w-4" />

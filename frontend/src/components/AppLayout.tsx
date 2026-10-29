@@ -136,7 +136,7 @@ function SidebarContent({
         )}
       </div>
 
-      <nav className="flex-1 space-y-6 overflow-y-auto px-3 py-4">
+      <nav className="flex-1 space-y-6 overflow-y-auto overscroll-contain px-3 py-4">
         {navSections.map((section) => (
           <div key={section.title}>
             <p className="px-3 pb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
@@ -261,7 +261,7 @@ export function AppLayout({ children, variant = "app" }: { children: ReactNode; 
       {mobileOpen && (
         <div className="fixed inset-0 z-40 lg:hidden">
           <div className="animate-fade-in absolute inset-0 bg-slate-950/50 backdrop-blur-sm" onClick={() => setMobileOpen(false)} />
-          <aside className="animate-pop-in absolute inset-y-0 left-0 w-72 max-w-[85vw] bg-white shadow-xl dark:bg-slate-900">
+          <aside className="animate-pop-in absolute inset-y-0 left-0 w-72 max-w-[85vw] overflow-y-auto overscroll-contain bg-white pb-safe shadow-xl dark:bg-slate-900">
             <button
               onClick={() => setMobileOpen(false)}
               aria-label={t("nav.closeMenu")}
@@ -301,7 +301,7 @@ export function AppLayout({ children, variant = "app" }: { children: ReactNode; 
         {fullBleed ? (
           children
         ) : (
-          <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-10 lg:py-10">{children}</main>
+          <main className="mx-auto max-w-6xl px-4 pb-28 pt-6 sm:px-6 sm:pt-8 lg:px-10 lg:py-10">{children}</main>
         )}
       </div>
 
