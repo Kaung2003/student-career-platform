@@ -27,7 +27,9 @@ services:
         sync: false
       - key: APP_URL
         value: https://student-career-platform.netlify.app
-      # Sign-up confirmation and password-reset emails: Gmail SMTP (app password) or Resend.
+      # Sign-up confirmation and password-reset emails. Brevo works on the free plan (SMTP is blocked there).
+      - key: BREVO_API_KEY
+        sync: false
       - key: SMTP_HOST
         value: smtp.gmail.com
       - key: SMTP_PORT

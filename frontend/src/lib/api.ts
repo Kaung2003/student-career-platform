@@ -18,6 +18,28 @@ export function clearLegacyToken(): void {
   }
 }
 
+// Shown when the server answers without a JSON error, e.g. a gateway timeout while it wakes up.
+// Kept here (outside React) in every UI language, read from the saved language choice.
+const BUSY: Record<string, string> = {
+  en: "The server is busy or waking up. Please wait a moment and try again.",
+  ja: "サーバーが混雑しているか起動中です。少し待ってからもう一度お試しください。",
+  zh: "服务器繁忙或正在启动，请稍等片刻后重试。",
+  es: "El servidor está ocupado o iniciándose. Espera un momento y vuelve a intentarlo.",
+  de: "Der Server ist ausgelastet oder startet gerade. Bitte warte kurz und versuche es erneut.",
+  my: "ဆာဗာ အလုပ်များနေသည် သို့မဟုတ် စတင်နေသည်။ ခဏစောင့်ပြီး ထပ်ကြိုးစားပါ။",
+};
+
+function fallbackMessage(status: number): string {
+  let language = "en";
+  try {
+    language = localStorage.getItem("scp_language") ?? navigator.language.slice(0, 2);
+  } catch {
+    // Storage unavailable — use English.
+  }
+  const busy = BUSY[language] ?? BUSY["en"]!;
+  return status >= 500 || status === 0 ? busy : "Something went wrong";
+}
+
 export class ApiError extends Error {
   status: number;
   /** Machine-readable reason from the API, e.g. "EMAIL_NOT_VERIFIED". */
@@ -59,7 +81,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const body = await res.json().catch(() => ({}));
 
   if (!res.ok) {
-    throw new ApiError(res.status, body.error ?? "Something went wrong", body.code);
+    throw new ApiError(res.status, body.error ?? fallbackMessage(res.status), body.code);
   }
 
   return body as T;

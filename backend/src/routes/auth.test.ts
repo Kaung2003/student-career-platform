@@ -5,9 +5,11 @@ import { prisma } from "../lib/prisma.js";
 import { signAuthToken } from "../lib/jwt.js";
 
 const sentEmails: { to: string; text: string }[] = [];
+let emailProviderDown = false;
 vi.mock("../lib/email.js", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../lib/email.js")>()),
   sendEmail: async (to: string, _subject: string, text: string) => {
+    if (emailProviderDown) throw new Error("Connection timeout");
     sentEmails.push({ to, text });
   },
 }));
@@ -23,6 +25,7 @@ const linkToken = (text: string) => /token=([\w-]+)/.exec(text)?.[1];
 beforeEach(async () => {
   await resetDatabase();
   sentEmails.length = 0;
+  emailProviderDown = false;
 });
 
 describe("registration with a password", () => {
@@ -63,6 +66,14 @@ describe("registration with a password", () => {
 
     const login = await request(app).post("/api/auth/login").send({ email: "grace@example.test", password: "cobol-forever" });
     expect(login.status).toBe(200);
+  });
+
+  it("still signs up instantly when the email provider is down", async () => {
+    emailProviderDown = true;
+    const res = await request(app).post("/api/auth/register").send({ name: "Mo", email: "mo@example.test", password: "long-enough-pw" });
+    expect(res.status).toBe(201);
+    // The link was still created, so "Resend email" can deliver it once email works again.
+    expect(await prisma.emailVerificationToken.count()).toBe(1);
   });
 
   it("resends the link only for unconfirmed accounts", async () => {

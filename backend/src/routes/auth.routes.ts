@@ -42,7 +42,10 @@ async function createProfile(userId: string, name: string) {
   await prisma.studentProfile.create({ data: { userId, slug } });
 }
 
-/** Emails a fresh one-day verification link (older unused links stop working). */
+/**
+ * Saves a fresh one-day verification link (older unused links stop working), then emails it
+ * in the background: the caller never waits on, or fails because of, the email provider.
+ */
 async function sendVerificationEmail(user: { id: string; name: string; email: string }) {
   const token = randomBytes(32).toString("base64url");
   await prisma.$transaction([
@@ -53,15 +56,11 @@ async function sendVerificationEmail(user: { id: string; name: string; email: st
   ]);
 
   const link = `${appUrl()}/verify-email?token=${token}`;
-  try {
-    await sendEmail(
-      user.email,
-      "Confirm your email for Student Career Platform",
-      `Hi ${user.name},\n\nWelcome to Student Career Platform! Please confirm your email address by opening this link within 24 hours:\n\n${link}\n\nIf you didn't create an account, you can ignore this email.`,
-    );
-  } catch (err) {
-    console.error("Failed to send verification email", err);
-  }
+  void sendEmail(
+    user.email,
+    "Confirm your email for Student Career Platform",
+    `Hi ${user.name},\n\nWelcome to Student Career Platform! Please confirm your email address by opening this link within 24 hours:\n\n${link}\n\nIf you didn't create an account, you can ignore this email.`,
+  ).catch((err) => console.error("Failed to send verification email", err));
 }
 
 /** Public settings the login and sign-up pages need. */
@@ -239,15 +238,11 @@ authRouter.post("/forgot-password", signupLimiter, async (req, res) => {
     });
 
     const link = `${appUrl()}/reset-password?token=${token}`;
-    try {
-      await sendEmail(
+    void sendEmail(
         user.email,
         "Reset your Student Career Platform password",
         `Hi ${user.name},\n\nSomeone asked to reset the password for your account. Open this link within one hour to choose a new password:\n\n${link}\n\nIf you didn't ask for this, you can ignore this email — your password won't change.`,
-      );
-    } catch (err) {
-      console.error("Failed to send password reset email", err);
-    }
+    ).catch((err) => console.error("Failed to send password reset email", err));
   }
 
   // Same answer whether or not the account exists, so this can't be used to discover emails.
