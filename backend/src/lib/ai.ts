@@ -7,8 +7,11 @@ const FALLBACK_MODELS = (process.env["GEMINI_FALLBACK_MODELS"] ?? "gemini-flash-
   .map((m) => m.trim())
   .filter((m) => m && m !== MODEL);
 
-// Give up on a model call that hasn't answered after this long, then retry or fall back.
-const REQUEST_TIMEOUT_MS = Number(process.env["AI_TIMEOUT_MS"] ?? 20_000);
+// Give up on a model call that hasn't answered after this long, then fall back. The hosting proxy
+// cuts requests off at about 26 seconds, so a stuck model plus its fallback must fit inside that.
+const REQUEST_TIMEOUT_MS = Number(process.env["AI_TIMEOUT_MS"] ?? 12_000);
+// A streamed reply must start this quickly; a healthy model's first words arrive within seconds.
+const FIRST_CHUNK_TIMEOUT_MS = Number(process.env["AI_FIRST_CHUNK_TIMEOUT_MS"] ?? 8_000);
 // A streamed reply may take longer overall, as long as words keep arriving.
 const STREAM_TOTAL_TIMEOUT_MS = 120_000;
 
@@ -45,18 +48,31 @@ function isTransient(err: unknown): boolean {
   return /\b(429|500|502|503|504)\b|overloaded|high demand|unavailable|timeout|timed out|abort|fetch failed/i.test(message);
 }
 
+const isTimeout = (err: unknown) => /timed out|timeout|abort/i.test(err instanceof Error ? err.message : String(err));
+
+/** A model that hung won't recover in time, so skip its remaining retries and go straight to the fallback. */
+function nextAttempt(attempts: string[], i: number, err: unknown): number {
+  let next = i + 1;
+  if (isTimeout(err)) {
+    while (attempts[next] === attempts[i]) next++;
+  }
+  return next;
+}
+
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 async function generate(model: string, system: string, messages: AiMessage[]): Promise<string> {
-  const result = await getClient()
-    .getGenerativeModel({ model, systemInstruction: system }, { timeout: REQUEST_TIMEOUT_MS })
-    .generateContent({
-      contents: messages.map((m) => ({
-        role: m.role === "assistant" ? "model" : "user",
-        parts: [{ text: m.content }],
-      })),
-    });
-
+  const result = await withTimeout(
+    getClient()
+      .getGenerativeModel({ model, systemInstruction: system }, { timeout: REQUEST_TIMEOUT_MS })
+      .generateContent({
+        contents: messages.map((m) => ({
+          role: m.role === "assistant" ? "model" : "user",
+          parts: [{ text: m.content }],
+        })),
+      }),
+    REQUEST_TIMEOUT_MS,
+  );
   return result.response.text();
 }
 
@@ -65,14 +81,16 @@ export async function complete(system: string, messages: AiMessage[]): Promise<s
   const attempts = [MODEL, MODEL, ...FALLBACK_MODELS];
   let lastError: unknown;
 
-  for (const [i, model] of attempts.entries()) {
+  for (let i = 0; i < attempts.length; ) {
+    const model = attempts[i]!;
     try {
       return await generate(model, system, messages);
     } catch (err) {
       lastError = err;
       if (!isTransient(err)) throw err;
-      console.warn(`AI model ${model} failed (attempt ${i + 1}/${attempts.length}), retrying...`);
-      if (i < attempts.length - 1) await sleep(400 * (i + 1));
+      console.warn(`AI model ${model} failed (attempt ${i + 1}/${attempts.length}), retrying...`, err instanceof Error ? err.message : err);
+      i = nextAttempt(attempts, i, err);
+      if (i < attempts.length) await sleep(400);
     }
   }
 
@@ -91,26 +109,26 @@ export async function stream(
   const attempts = [MODEL, MODEL, ...FALLBACK_MODELS];
   let lastError: unknown;
 
-  for (const [i, model] of attempts.entries()) {
+  for (let i = 0; i < attempts.length; ) {
+    const model = attempts[i]!;
     let full = "";
     try {
-      const result = await withTimeout(
-        getClient()
+      // Only the start is time-boxed: once words flow, a long answer is fine.
+      const started = (async () => {
+        const result = await getClient()
           .getGenerativeModel({ model, systemInstruction: system }, { timeout: STREAM_TOTAL_TIMEOUT_MS })
           .generateContentStream({
             contents: messages.map((m) => ({
               role: m.role === "assistant" ? "model" : "user",
               parts: [{ text: m.content }],
             })),
-          }),
-        REQUEST_TIMEOUT_MS,
-      );
+          });
+        const iterator = result.stream[Symbol.asyncIterator]();
+        return { iterator, first: await iterator.next() };
+      })();
+      const { iterator, first } = await withTimeout(started, FIRST_CHUNK_TIMEOUT_MS);
 
-      const iterator = result.stream[Symbol.asyncIterator]();
-      for (let first = true; ; first = false) {
-        // Only the first chunk is time-boxed: once words flow, a long answer is fine.
-        const next = first ? await withTimeout(iterator.next(), REQUEST_TIMEOUT_MS) : await iterator.next();
-        if (next.done) break;
+      for (let next = first; !next.done; next = await iterator.next()) {
         const text = next.value.text();
         if (text) {
           full += text;
@@ -121,8 +139,9 @@ export async function stream(
     } catch (err) {
       lastError = err;
       if (full || !isTransient(err)) throw err;
-      console.warn(`AI model ${model} failed to stream (attempt ${i + 1}/${attempts.length}), retrying...`);
-      if (i < attempts.length - 1) await sleep(400 * (i + 1));
+      console.warn(`AI model ${model} failed to stream (attempt ${i + 1}/${attempts.length}), retrying...`, err instanceof Error ? err.message : err);
+      i = nextAttempt(attempts, i, err);
+      if (i < attempts.length) await sleep(400);
     }
   }
 
