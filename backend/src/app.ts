@@ -15,6 +15,7 @@ import { interviewRouter } from "./routes/interview.routes.js";
 import { feedbackRouter } from "./routes/feedback.routes.js";
 import { notificationRouter } from "./routes/notification.routes.js";
 import { adminRouter } from "./routes/admin.routes.js";
+import { companyRouter } from "./routes/company.routes.js";
 import { isAiConfigured } from "./lib/ai.js";
 import { isStorageConfigured } from "./lib/storage.js";
 import { isEmailConfigured } from "./lib/email.js";
@@ -73,6 +74,7 @@ export function createApp() {
   app.use("/api/interview", interviewRouter);
   app.use("/api/feedback", feedbackRouter);
   app.use("/api/notifications", notificationRouter);
+  app.use("/api/company", companyRouter);
   app.use("/api/admin", adminRouter);
 
   app.use((req, res) => {

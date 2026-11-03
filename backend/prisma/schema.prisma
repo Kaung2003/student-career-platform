@@ -18,6 +18,12 @@ enum Role {
   ADMIN
 }
 
+enum CompanyStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 enum CertStatus {
   PLANNING
   IN_PROGRESS
@@ -63,8 +69,11 @@ model User {
   emailVerified DateTime?
   googleId      String?   @unique
   suspended Boolean  @default(false)
+  // Part of every session token; bumping it logs out all existing sessions.
+  sessionVersion Int @default(0)
 
   profile           StudentProfile?
+  company           Company?
   certifications    Certification[]
   interviewAttempts InterviewAttempt[]
   feedback          Feedback[]
@@ -293,4 +302,26 @@ model AuditLog {
   createdAt DateTime @default(now())
 
   @@index([createdAt])
+}
+
+// An employer's organization. Stays PENDING until an admin has checked it's a real company.
+model Company {
+  id          String        @id @default(cuid())
+  name        String
+  website     String
+  industry    String?
+  location    String?
+  description String?
+  status      CompanyStatus @default(PENDING)
+  // Shown to the company when a review is rejected.
+  reviewNote  String?
+  reviewedAt  DateTime?
+
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String        @unique
+
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([status, createdAt])
 }

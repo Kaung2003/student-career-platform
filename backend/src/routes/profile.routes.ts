@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
-import { requireAuth } from "../middleware/require-auth.js";
+import { blockEmployers, requireAuth } from "../middleware/require-auth.js";
 import { prisma } from "../lib/prisma.js";
 import { slugify, uniqueSlugFrom } from "../lib/slugify.js";
 import { HttpError, parse } from "../lib/http.js";
@@ -8,7 +8,7 @@ import { optionalText, optionalUrl, tagList } from "../lib/schemas.js";
 
 export const profileRouter = Router();
 
-profileRouter.use(requireAuth);
+profileRouter.use(requireAuth, blockEmployers);
 
 profileRouter.get("/me", async (req, res) => {
   const profile = await prisma.studentProfile.findUnique({

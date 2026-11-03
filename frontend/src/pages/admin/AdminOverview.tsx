@@ -130,6 +130,15 @@ export function AdminOverview() {
     <div className="space-y-6">
       <PageHeader title={t("admin.overview.title")} description={t("admin.overview.description")} />
 
+      {totals.pendingCompanies > 0 && (
+        <Link
+          to="/admin/companies"
+          className="mb-6 block rounded-xl bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800 hover:bg-amber-100 dark:bg-amber-500/10 dark:text-amber-300 dark:hover:bg-amber-500/20"
+        >
+          {t("admin.companies.pendingBanner", { count: totals.pendingCompanies })}
+        </Link>
+      )}
+
       <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         {tiles.map((tile) => (
           <Link key={tile.label} to={tile.to} className="group">

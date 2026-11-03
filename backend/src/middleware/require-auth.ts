@@ -41,12 +41,17 @@ async function resolve(req: Request): Promise<Resolved | null> {
   // Look the user up on every request so role changes and suspensions apply immediately.
   const user = await prisma.user.findUnique({
     where: { id: payload.userId },
-    select: { role: true, suspended: true },
+    select: { role: true, suspended: true, sessionVersion: true },
   });
 
   if (!user) return { ok: false, status: 401, error: "Account no longer exists" };
   if (user.suspended) {
     return { ok: false, status: 403, error: "This account has been suspended. Contact support for help." };
+  }
+
+  // Changing or resetting the password bumps the version, which ends every older session.
+  if ((payload.sv ?? 0) !== user.sessionVersion) {
+    return { ok: false, status: 401, error: "Your session has ended. Please log in again." };
   }
 
   return { ok: true, auth: { userId: payload.userId, role: user.role }, via: found.via };
@@ -88,6 +93,23 @@ export async function optionalAuth(req: Request, _res: Response, next: NextFunct
 export function requireAdmin(req: Request, res: Response, next: NextFunction) {
   if (req.auth?.role !== "ADMIN") {
     res.status(403).json({ error: "Admin access required" });
+    return;
+  }
+  next();
+}
+
+/** Company accounts have their own panel: the student features (and their AI costs) aren't for them. */
+export function blockEmployers(req: Request, res: Response, next: NextFunction) {
+  if (req.auth?.role === "EMPLOYER") {
+    res.status(403).json({ error: "This feature is for student accounts." });
+    return;
+  }
+  next();
+}
+
+export function requireEmployer(req: Request, res: Response, next: NextFunction) {
+  if (req.auth?.role !== "EMPLOYER") {
+    res.status(403).json({ error: "Company account required" });
     return;
   }
   next();

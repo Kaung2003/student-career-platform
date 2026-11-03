@@ -21,13 +21,14 @@ const VERIFY_TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
 export const authRouter = Router();
 
 type SessionUser = { id: string; name: string; email: string; role: string; password?: string | null };
+type SessionOwner = SessionUser & { sessionVersion: number };
 
 export function toPublicUser(user: SessionUser) {
   return { id: user.id, name: user.name, email: user.email, role: user.role, hasPassword: Boolean(user.password) };
 }
 
-function startSession(req: Request, res: Response, user: SessionUser) {
-  setSessionCookie(req, res, signAuthToken({ userId: user.id, role: user.role }));
+export function startSession(req: Request, res: Response, user: SessionOwner) {
+  setSessionCookie(req, res, signAuthToken({ userId: user.id, role: user.role, sv: user.sessionVersion }));
 }
 
 function findUserByEmail(address: string) {
@@ -46,7 +47,7 @@ async function createProfile(userId: string, name: string) {
  * Saves a fresh one-day verification link (older unused links stop working), then emails it
  * in the background: the caller never waits on, or fails because of, the email provider.
  */
-async function sendVerificationEmail(user: { id: string; name: string; email: string }) {
+export async function sendVerificationEmail(user: { id: string; name: string; email: string }) {
   const token = randomBytes(32).toString("base64url");
   await prisma.$transaction([
     prisma.emailVerificationToken.deleteMany({ where: { userId: user.id } }),
@@ -68,12 +69,8 @@ authRouter.get("/config", (_req, res) => {
   res.json({ googleClientId: googleClientId(), emailConfigured: isEmailConfigured() });
 });
 
-const registerSchema = z.object({
-  name: personName,
-  email,
-  password,
-  role: z.enum(["STUDENT", "EMPLOYER"]).optional(),
-});
+// Strict: a role can't be chosen here. Company accounts sign up through /api/company/register.
+const registerSchema = z.strictObject({ name: personName, email, password });
 
 /** Password sign-up: the account can't log in until the emailed link is clicked. */
 authRouter.post("/register", signupLimiter, async (req, res) => {
@@ -88,7 +85,6 @@ authRouter.post("/register", signupLimiter, async (req, res) => {
       name: body.name,
       email: body.email,
       password: await bcrypt.hash(body.password, SALT_ROUNDS),
-      ...(body.role ? { role: body.role } : {}),
     },
   });
   await createProfile(user.id, user.name);
@@ -261,7 +257,11 @@ authRouter.post("/reset-password", signupLimiter, async (req, res) => {
   const hashed = await bcrypt.hash(body.password, SALT_ROUNDS);
   await prisma.$transaction([
     // Receiving the reset email also proves the address is real.
-    prisma.user.update({ where: { id: record.userId }, data: { password: hashed, emailVerified: new Date() } }),
+    // Whoever had access before the reset is logged out.
+    prisma.user.update({
+      where: { id: record.userId },
+      data: { password: hashed, emailVerified: new Date(), sessionVersion: { increment: 1 } },
+    }),
     prisma.passwordResetToken.update({ where: { id: record.id }, data: { usedAt: new Date() } }),
     // Any other outstanding links stop working once the password changes.
     prisma.passwordResetToken.deleteMany({ where: { userId: record.userId, usedAt: null, id: { not: record.id } } }),

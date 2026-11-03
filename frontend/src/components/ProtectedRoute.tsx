@@ -23,8 +23,30 @@ export function ProtectedRoute() {
     return <Navigate to="/login" replace state={{ from: location.pathname }} />;
   }
 
+  if (user.role === "EMPLOYER") return <Navigate to="/company" replace />;
+
   return (
     <AppLayout>
+      <Outlet />
+    </AppLayout>
+  );
+}
+
+/** Layout route for the company panel: company accounts only. */
+export function CompanyRoute() {
+  const { user, loading } = useAuth();
+  const location = useLocation();
+
+  if (loading) return <FullPageSpinner />;
+
+  if (!user) {
+    return <Navigate to="/login" replace state={{ from: location.pathname }} />;
+  }
+
+  if (user.role !== "EMPLOYER") return <Navigate to="/dashboard" replace />;
+
+  return (
+    <AppLayout variant="company">
       <Outlet />
     </AppLayout>
   );
@@ -37,6 +59,7 @@ export function BareProtectedRoute() {
 
   if (loading) return <FullPageSpinner />;
   if (!user) return <Navigate to="/login" replace state={{ from: location.pathname }} />;
+  if (user.role === "EMPLOYER") return <Navigate to="/company" replace />;
   return <Outlet />;
 }
 

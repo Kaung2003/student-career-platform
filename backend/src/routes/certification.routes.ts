@@ -1,13 +1,13 @@
 import { Router } from "express";
 import { z } from "zod";
-import { requireAuth } from "../middleware/require-auth.js";
+import { blockEmployers, requireAuth } from "../middleware/require-auth.js";
 import { prisma } from "../lib/prisma.js";
 import { HttpError, parse } from "../lib/http.js";
 import { optionalText, optionalUrl } from "../lib/schemas.js";
 
 export const certificationRouter = Router();
 
-certificationRouter.use(requireAuth);
+certificationRouter.use(requireAuth, blockEmployers);
 
 const certificationSchema = z.object({
   name: z.string().trim().min(1, "is required").max(120, "must be at most 120 characters"),

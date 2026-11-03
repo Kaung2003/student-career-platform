@@ -1,6 +1,6 @@
 import { Router, type Response } from "express";
 import { z } from "zod";
-import { requireAuth } from "../middleware/require-auth.js";
+import { blockEmployers, requireAuth } from "../middleware/require-auth.js";
 import { prisma } from "../lib/prisma.js";
 import { complete, isAiConfigured, languageInstruction, stream, type AiMessage } from "../lib/ai.js";
 import { HttpError, parse } from "../lib/http.js";
@@ -9,7 +9,7 @@ import { aiLimiter } from "../lib/rate-limit.js";
 
 export const chatRouter = Router();
 
-chatRouter.use(requireAuth);
+chatRouter.use(requireAuth, blockEmployers);
 
 const SYSTEM_PROMPT = `You are Career Assistant, a friendly and knowledgeable career advisor built into Career Platform, a tool students use to build their portfolio and prepare for job applications.
 

@@ -2,12 +2,22 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from "
 import { api, clearLegacyToken } from "../lib/api";
 import type { User } from "../lib/types";
 
+export interface CompanySignUp {
+  companyName: string;
+  website: string;
+  name: string;
+  email: string;
+  password: string;
+}
+
 interface AuthContextValue {
   user: User | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   /** Creates the account and emails a confirmation link; returns the address it was sent to. */
   register: (name: string, email: string, password: string) => Promise<string>;
+  /** Same as register, for a company account that an admin then reviews. */
+  registerCompany: (details: CompanySignUp) => Promise<string>;
   loginWithGoogle: (credential: string) => Promise<void>;
   verifyEmail: (token: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -50,6 +60,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return res.email;
   }
 
+  async function registerCompany(details: CompanySignUp) {
+    const res = await api.post<{ verificationRequired: true; email: string }>("/company/register", details);
+    return res.email;
+  }
+
   async function loginWithGoogle(credential: string) {
     const res = await api.post<AuthResponse>("/auth/google", { credential });
     clearLegacyToken();
@@ -72,7 +87,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, loginWithGoogle, verifyEmail, logout, updateUser: setUser }}>{children}</AuthContext.Provider>
+    <AuthContext.Provider value={{ user, loading, login, register, registerCompany, loginWithGoogle, verifyEmail, logout, updateUser: setUser }}>{children}</AuthContext.Provider>
   );
 }
 

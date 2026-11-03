@@ -13,6 +13,7 @@ import { useI18n } from "../i18n/I18nContext";
 import type { MessageKey } from "../i18n/locales/en";
 import {
   ArrowLeftIcon,
+  BuildingIcon,
   SettingsIcon,
   AwardIcon,
   HelpCircleIcon,
@@ -84,6 +85,7 @@ const adminSections: Section[] = [
     items: [
       { to: "/admin", label: "nav.overview", icon: DashboardIcon },
       { to: "/admin/users", label: "nav.users", icon: UsersIcon },
+      { to: "/admin/companies", label: "nav.companies", icon: BuildingIcon },
       { to: "/admin/feedback", label: "nav.feedbackInbox", icon: InboxIcon },
       { to: "/admin/questions", label: "nav.questions", icon: HelpCircleIcon },
       { to: "/admin/comments", label: "nav.comments", icon: MessageSquareIcon },
@@ -92,7 +94,26 @@ const adminSections: Section[] = [
   },
 ];
 
-export type LayoutVariant = "app" | "admin";
+const companySections: Section[] = [
+  {
+    title: "nav.company",
+    items: [
+      { to: "/company", label: "common.dashboard", icon: DashboardIcon },
+      { to: "/company/profile", label: "company.profileTitle", icon: BuildingIcon },
+    ],
+  },
+  {
+    title: "nav.support",
+    items: [
+      { to: "/company/settings", label: "nav.settings", icon: SettingsIcon },
+      { to: "/company/feedback", label: "nav.feedback", icon: MessageSquareIcon },
+    ],
+  },
+];
+
+export type LayoutVariant = "app" | "admin" | "company";
+
+const HOME: Record<LayoutVariant, string> = { app: "/dashboard", admin: "/admin", company: "/company" };
 
 function SidebarContent({
   slug,
@@ -111,7 +132,9 @@ function SidebarContent({
   const navSections: Section[] =
     variant === "admin"
       ? adminSections
-      : user?.role === "ADMIN"
+      : variant === "company"
+        ? companySections
+        : user?.role === "ADMIN"
         ? [...sections, { title: "nav.administration", items: [{ to: "/admin", label: "nav.adminPanel", icon: ShieldIcon }] }]
         : sections;
 
@@ -123,7 +146,7 @@ function SidebarContent({
   return (
     <div className="flex h-full flex-col">
       <div className="flex h-16 shrink-0 items-center gap-2 px-5">
-        <Logo to={variant === "admin" ? "/admin" : "/dashboard"} onClick={onNavigate} />
+        <Logo to={HOME[variant]} onClick={onNavigate} />
         {!onNavigate && (
           <div className="ml-auto">
             <NotificationBell align="left" />
@@ -147,7 +170,7 @@ function SidebarContent({
                 <NavLink
                   key={to}
                   to={to}
-                  end={to === "/admin"}
+                  end={to === "/admin" || to === "/company"}
                   onClick={onNavigate}
                   className={({ isActive }) =>
                     `group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition ${
@@ -228,7 +251,10 @@ function SidebarContent({
   );
 }
 
-export function AppLayout({ children, variant = "app" }: { children: ReactNode; variant?: LayoutVariant }) {
+export function AppLayout({ children, variant: requested = "app" }: { children: ReactNode; variant?: LayoutVariant }) {
+  const { user } = useAuth();
+  // Pages open to everyone (like Discover) still show a company account its own panel.
+  const variant: LayoutVariant = user?.role === "EMPLOYER" ? "company" : requested;
   const location = useLocation();
   const { t } = useI18n();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -236,7 +262,7 @@ export function AppLayout({ children, variant = "app" }: { children: ReactNode; 
   const fullBleed = location.pathname === "/assistant";
 
   useEffect(() => {
-    if (variant === "admin") return;
+    if (variant !== "app") return;
     function load() {
       api
         .get<{ profile: StudentProfile | null }>("/profile/me")
@@ -283,14 +309,14 @@ export function AppLayout({ children, variant = "app" }: { children: ReactNode; 
           >
             <MenuIcon className="h-5 w-5" />
           </button>
-          <Logo to={variant === "admin" ? "/admin" : "/dashboard"} />
+          <Logo to={HOME[variant]} />
           <div className="flex items-center">
           <NotificationBell />
           {variant === "admin" ? (
             <span className="rounded-md bg-slate-900 px-1.5 py-0.5 text-[10px] font-bold uppercase text-white dark:bg-white dark:text-slate-900">
               Admin
             </span>
-          ) : (
+          ) : variant === "company" ? null : (
           <Link to="/assistant" aria-label={t("nav.assistant")} className="rounded-lg p-2 text-violet-600 hover:bg-violet-50 dark:text-violet-400 dark:hover:bg-violet-500/10">
             <SparklesIcon className="h-5 w-5" />
           </Link>

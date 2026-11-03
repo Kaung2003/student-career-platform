@@ -4,6 +4,10 @@ import { prisma } from "../lib/prisma.js";
 import type { Prisma } from "../generated/prisma/client.js";
 import { audit } from "../lib/audit.js";
 import { notify } from "../lib/notify.js";
+import { emailMatchesWebsite } from "../lib/company.js";
+import { sendEmail, appUrl } from "../lib/email.js";
+import { parse, HttpError } from "../lib/http.js";
+import { z } from "zod";
 
 export const adminRouter = Router();
 
@@ -28,7 +32,7 @@ adminRouter.get("/stats", async (_req, res) => {
   since14.setHours(0, 0, 0, 0);
   const since7 = new Date(now - 7 * DAY);
 
-  const [users, newUsers, admins, suspended, projects, certifications, attempts, openFeedback, comments, questions, recentUsers] =
+  const [users, newUsers, admins, suspended, projects, certifications, attempts, openFeedback, comments, questions, recentUsers, pendingCompanies] =
     await Promise.all([
       prisma.user.count(),
       prisma.user.count({ where: { createdAt: { gte: since7 } } }),
@@ -41,6 +45,7 @@ adminRouter.get("/stats", async (_req, res) => {
       prisma.comment.count(),
       prisma.interviewQuestion.count(),
       prisma.user.findMany({ where: { createdAt: { gte: since14 } }, select: { createdAt: true } }),
+      prisma.company.count({ where: { status: "PENDING", user: { emailVerified: { not: null } } } }),
     ]);
 
   const signups: { date: string; count: number }[] = [];
@@ -70,7 +75,7 @@ adminRouter.get("/stats", async (_req, res) => {
   ]);
 
   res.json({
-    totals: { users, newUsers, admins, suspended, projects, certifications, attempts, openFeedback, comments, questions },
+    totals: { users, newUsers, admins, suspended, projects, certifications, attempts, openFeedback, comments, questions, pendingCompanies },
     signups,
     latestUsers,
     latestFeedback: latestFeedback.map((f) => ({
@@ -82,6 +87,65 @@ adminRouter.get("/stats", async (_req, res) => {
       userName: f.user.name,
     })),
   });
+});
+
+// ---------- Companies ----------
+
+const COMPANY_STATUSES = ["PENDING", "APPROVED", "REJECTED"] as const;
+
+adminRouter.get("/companies", async (req, res) => {
+  const status = req.query["status"];
+  const companies = await prisma.company.findMany({
+    where: oneOf(COMPANY_STATUSES, status) ? { status } : {},
+    orderBy: { createdAt: "desc" },
+    take: 200,
+    include: { user: { select: { name: true, email: true, emailVerified: true } } },
+  });
+
+  res.json({
+    companies: companies.map(({ user, ...company }) => ({
+      ...company,
+      contactName: user.name,
+      contactEmail: user.email,
+      emailConfirmed: Boolean(user.emailVerified),
+      // A work email on the company's own domain is good evidence; the admin still decides.
+      emailMatchesWebsite: emailMatchesWebsite(user.email, company.website),
+    })),
+  });
+});
+
+const reviewSchema = z.object({
+  status: z.enum(["APPROVED", "REJECTED"]),
+  note: z.string().trim().max(500).optional(),
+});
+
+adminRouter.post("/companies/:id/review", async (req, res) => {
+  const body = parse(reviewSchema, req.body);
+  const company = await prisma.company.findUnique({
+    where: { id: String(req.params["id"]) },
+    include: { user: { select: { name: true, email: true, emailVerified: true } } },
+  });
+  if (!company) throw new HttpError(404, "Company not found");
+  if (body.status === "APPROVED" && !company.user.emailVerified) {
+    throw new HttpError(400, "This company hasn't confirmed its email address yet.");
+  }
+
+  const updated = await prisma.company.update({
+    where: { id: company.id },
+    data: { status: body.status, reviewNote: body.status === "REJECTED" ? (body.note ?? null) : null, reviewedAt: new Date() },
+  });
+  await audit(req.auth!.userId, `company.${body.status.toLowerCase()}`, "Company", company.id, { name: company.name });
+
+  const approved = body.status === "APPROVED";
+  void sendEmail(
+    company.user.email,
+    approved ? "Your company account is approved" : "Your company account wasn't approved",
+    approved
+      ? `Hi ${company.user.name},\n\n${company.name} has been approved on Student Career Platform. You can log in here:\n\n${appUrl()}/company`
+      : `Hi ${company.user.name},\n\n${company.name} wasn't approved on Student Career Platform.${body.note ? `\n\nReason: ${body.note}` : ""}\n\nYou can update your company details and submit again here:\n\n${appUrl()}/company/profile`,
+  ).catch((err) => console.error("Failed to send company review email", err));
+
+  res.json({ company: updated });
 });
 
 // ---------- Users ----------

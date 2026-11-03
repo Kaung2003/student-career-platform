@@ -9,6 +9,27 @@ export interface User {
   hasPassword: boolean;
 }
 
+export type CompanyStatus = "PENDING" | "APPROVED" | "REJECTED";
+
+export interface Company {
+  id: string;
+  name: string;
+  website: string;
+  industry: string | null;
+  location: string | null;
+  description: string | null;
+  status: CompanyStatus;
+  reviewNote: string | null;
+  createdAt: string;
+}
+
+export interface AdminCompany extends Company {
+  contactName: string;
+  contactEmail: string;
+  emailConfirmed: boolean;
+  emailMatchesWebsite: boolean;
+}
+
 export interface Project {
   id: string;
   title: string;
@@ -106,6 +127,7 @@ export type FeedbackStatus = "NEW" | "IN_PROGRESS" | "RESOLVED";
 
 export interface AdminStats {
   totals: {
+    pendingCompanies: number;
     users: number;
     newUsers: number;
     admins: number;

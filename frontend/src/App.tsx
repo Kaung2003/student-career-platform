@@ -5,7 +5,7 @@ import { ThemeProvider } from "./context/ThemeContext";
 import { UiProvider } from "./context/UiContext";
 import { ChatProvider } from "./context/ChatContext";
 import { I18nProvider } from "./i18n/I18nContext";
-import { AdminRoute, BareProtectedRoute, OptionalAuthRoute, ProtectedRoute } from "./components/ProtectedRoute";
+import { AdminRoute, BareProtectedRoute, CompanyRoute, OptionalAuthRoute, ProtectedRoute } from "./components/ProtectedRoute";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { Landing } from "./pages/Landing";
 
@@ -32,6 +32,10 @@ const Directory = named(() => import("./pages/Directory"), "Directory");
 const NotFound = named(() => import("./pages/NotFound"), "NotFound");
 const Privacy = lazy(() => import("./pages/Legal").then((m) => ({ default: () => <m.Legal page="privacy" /> })));
 const Terms = lazy(() => import("./pages/Legal").then((m) => ({ default: () => <m.Legal page="terms" /> })));
+const CompanyRegister = named(() => import("./pages/company/CompanyRegister"), "CompanyRegister");
+const CompanyDashboard = named(() => import("./pages/company/CompanyDashboard"), "CompanyDashboard");
+const CompanyProfile = named(() => import("./pages/company/CompanyProfile"), "CompanyProfile");
+const AdminCompanies = named(() => import("./pages/admin/AdminCompanies"), "AdminCompanies");
 const AdminOverview = named(() => import("./pages/admin/AdminOverview"), "AdminOverview");
 const AdminUsers = named(() => import("./pages/admin/AdminUsers"), "AdminUsers");
 const AdminFeedback = named(() => import("./pages/admin/AdminFeedback"), "AdminFeedback");
@@ -60,6 +64,7 @@ function App() {
                     <Route path="/" element={<Landing />} />
                     <Route path="/login" element={<Login />} />
                     <Route path="/register" element={<Register />} />
+                    <Route path="/company/register" element={<CompanyRegister />} />
                     <Route path="/forgot-password" element={<ForgotPassword />} />
                     <Route path="/reset-password" element={<ResetPassword />} />
                     <Route path="/verify-email" element={<VerifyEmail />} />
@@ -86,9 +91,17 @@ function App() {
                       <Route path="/settings" element={<Settings />} />
                     </Route>
 
+                    <Route path="/company" element={<CompanyRoute />}>
+                      <Route index element={<CompanyDashboard />} />
+                      <Route path="profile" element={<CompanyProfile />} />
+                      <Route path="settings" element={<Settings />} />
+                      <Route path="feedback" element={<Feedback />} />
+                    </Route>
+
                     <Route path="/admin" element={<AdminRoute />}>
                       <Route index element={<AdminOverview />} />
                       <Route path="users" element={<AdminUsers />} />
+                      <Route path="companies" element={<AdminCompanies />} />
                       <Route path="feedback" element={<AdminFeedback />} />
                       <Route path="questions" element={<AdminQuestions />} />
                       <Route path="comments" element={<AdminComments />} />

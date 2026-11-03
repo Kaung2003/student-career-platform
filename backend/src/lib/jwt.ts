@@ -11,6 +11,8 @@ const JWT_SECRET: string = rawSecret;
 export interface AuthTokenPayload {
   userId: string;
   role: string;
+  /** The user's sessionVersion when this token was issued. Older tokens don't have it and count as 0. */
+  sv?: number;
 }
 
 export function signAuthToken(payload: AuthTokenPayload): string {

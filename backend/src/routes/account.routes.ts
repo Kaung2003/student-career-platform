@@ -6,7 +6,7 @@ import { prisma } from "../lib/prisma.js";
 import { HttpError, parse } from "../lib/http.js";
 import { password, personName } from "../lib/schemas.js";
 import { clearSessionCookie } from "../lib/session.js";
-import { SALT_ROUNDS, toPublicUser } from "./auth.routes.js";
+import { SALT_ROUNDS, startSession, toPublicUser } from "./auth.routes.js";
 
 export const accountRouter = Router();
 
@@ -34,22 +34,25 @@ accountRouter.post("/password", async (req, res) => {
     await checkPassword(current.id, body.currentPassword);
   }
 
-  await prisma.user.update({
+  // Logs out every other device; this one gets a fresh session so the user stays signed in here.
+  const updated = await prisma.user.update({
     where: { id: req.auth!.userId },
-    data: { password: await bcrypt.hash(body.newPassword, SALT_ROUNDS) },
+    data: { password: await bcrypt.hash(body.newPassword, SALT_ROUNDS), sessionVersion: { increment: 1 } },
   });
+  startSession(req, res, updated);
   res.json({ ok: true });
 });
 
 /** Everything we store about the user, as a downloadable JSON file. */
 accountRouter.get("/export", async (req, res) => {
   const userId = req.auth!.userId;
-  const [user, profile, certifications, attempts, feedback, comments, conversations] = await Promise.all([
+  const [user, profile, company, certifications, attempts, feedback, comments, conversations] = await Promise.all([
     prisma.user.findUniqueOrThrow({
       where: { id: userId },
       select: { id: true, name: true, email: true, role: true, createdAt: true },
     }),
     prisma.studentProfile.findUnique({ where: { userId }, include: { projects: true } }),
+    prisma.company.findUnique({ where: { userId } }),
     prisma.certification.findMany({ where: { userId } }),
     prisma.interviewAttempt.findMany({ where: { userId }, include: { question: { select: { prompt: true } } } }),
     prisma.feedback.findMany({ where: { userId } }),
@@ -62,6 +65,7 @@ accountRouter.get("/export", async (req, res) => {
     exportedAt: new Date().toISOString(),
     user,
     profile,
+    company,
     certifications,
     interviewAttempts: attempts,
     feedback,

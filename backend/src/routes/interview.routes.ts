@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { requireAuth } from "../middleware/require-auth.js";
+import { blockEmployers, requireAuth } from "../middleware/require-auth.js";
 import { prisma } from "../lib/prisma.js";
 import { z } from "zod";
 import { complete, isAiConfigured, languageInstruction } from "../lib/ai.js";
@@ -9,7 +9,7 @@ import { aiLimiter } from "../lib/rate-limit.js";
 
 export const interviewRouter = Router();
 
-interviewRouter.use(requireAuth);
+interviewRouter.use(requireAuth, blockEmployers);
 
 const CATEGORIES = ["BEHAVIORAL", "TECHNICAL", "SITUATIONAL"] as const;
 type Category = (typeof CATEGORIES)[number];

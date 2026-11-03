@@ -109,6 +109,12 @@ export function Register() {
           {t("common.logIn")}
         </Link>
       </p>
+      <p className="mt-2 text-center text-sm text-slate-500 dark:text-slate-400">
+        {t("company.areYouCompany")}{" "}
+        <Link to="/company/register" className="font-medium text-blue-600 hover:underline dark:text-blue-400">
+          {t("company.companySignUp")}
+        </Link>
+      </p>
     </AuthLayout>
   );
 }

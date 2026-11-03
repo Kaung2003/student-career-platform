@@ -103,11 +103,13 @@ describe("registration with a password", () => {
     expect(shortPassword.body.error).toMatch(/password/);
   });
 
-  it("never lets someone sign up as an admin", async () => {
-    const res = await request(app)
-      .post("/api/auth/register")
-      .send({ name: "Mallory", email: "m@example.test", password: "long-enough-pw", role: "ADMIN" });
-    expect(res.status).toBe(400);
+  it("never lets someone choose a role when signing up", async () => {
+    for (const role of ["ADMIN", "EMPLOYER"]) {
+      const res = await request(app)
+        .post("/api/auth/register")
+        .send({ name: "Mallory", email: "m@example.test", password: "long-enough-pw", role });
+      expect(res.status).toBe(400);
+    }
   });
 });
 
@@ -198,6 +200,35 @@ describe("login and sessions", () => {
 
     expect((await agent.get("/api/profile/me")).status).toBe(403);
     expect((await request(app).post("/api/auth/login").send({ email: user.email, password })).status).toBe(403);
+  });
+});
+
+describe("ending sessions when the password changes", () => {
+  it("logs out other devices but keeps this one signed in", async () => {
+    const { agent: phone, user, password } = await signUp();
+    const laptop = request.agent(app);
+    await laptop.post("/api/auth/login").send({ email: user.email, password }).expect(200);
+
+    await phone.post("/api/account/password").send({ currentPassword: password, newPassword: "a-brand-new-password" }).expect(200);
+
+    expect((await phone.get("/api/auth/me")).status).toBe(200);
+    expect((await laptop.get("/api/auth/me")).status).toBe(401);
+  });
+
+  it("logs out every device after a password reset", async () => {
+    const { agent, user } = await signUp();
+    sentEmails.length = 0;
+    await request(app).post("/api/auth/forgot-password").send({ email: user.email }).expect(200);
+    const token = linkToken(sentEmails[0]!.text);
+
+    await request(app).post("/api/auth/reset-password").send({ token, password: "brand-new-password" }).expect(200);
+    expect((await agent.get("/api/auth/me")).status).toBe(401);
+  });
+
+  it("still accepts sessions issued before session versions existed", async () => {
+    const { user } = await signUp();
+    const old = signAuthToken({ userId: user.id, role: "STUDENT" });
+    expect((await request(app).get("/api/auth/me").set("Cookie", `scp_session=${old}`)).status).toBe(200);
   });
 });
 
