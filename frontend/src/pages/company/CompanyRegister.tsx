@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { useI18n } from "../../i18n/I18nContext";
 import { ApiError } from "../../lib/api";
-import { AuthLayout } from "../../components/AuthLayout";
+import { AuthLayout, COMPANY_PANEL } from "../../components/AuthLayout";
 import { CheckEmailNotice } from "../../components/CheckEmailNotice";
 import { Field, inputClass } from "../../components/ui/Field";
 import { Button } from "../../components/ui/Button";
@@ -35,7 +35,7 @@ export function CompanyRegister() {
   }
 
   return (
-    <AuthLayout title={t("company.registerTitle")} subtitle={t("company.registerSubtitle")}>
+    <AuthLayout title={t("company.registerTitle")} subtitle={t("company.registerSubtitle")} panel={COMPANY_PANEL}>
       {sentTo ? (
         <CheckEmailNotice email={sentTo} />
       ) : (

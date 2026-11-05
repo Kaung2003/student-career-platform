@@ -34,6 +34,7 @@ const Privacy = lazy(() => import("./pages/Legal").then((m) => ({ default: () =>
 const Terms = lazy(() => import("./pages/Legal").then((m) => ({ default: () => <m.Legal page="terms" /> })));
 const CompanyRegister = named(() => import("./pages/company/CompanyRegister"), "CompanyRegister");
 const CompanyDashboard = named(() => import("./pages/company/CompanyDashboard"), "CompanyDashboard");
+const CompanySearch = named(() => import("./pages/company/CompanySearch"), "CompanySearch");
 const CompanyProfile = named(() => import("./pages/company/CompanyProfile"), "CompanyProfile");
 const AdminCompanies = named(() => import("./pages/admin/AdminCompanies"), "AdminCompanies");
 const AdminOverview = named(() => import("./pages/admin/AdminOverview"), "AdminOverview");
@@ -93,6 +94,7 @@ function App() {
 
                     <Route path="/company" element={<CompanyRoute />}>
                       <Route index element={<CompanyDashboard />} />
+                      <Route path="students" element={<CompanySearch />} />
                       <Route path="profile" element={<CompanyProfile />} />
                       <Route path="settings" element={<Settings />} />
                       <Route path="feedback" element={<Feedback />} />

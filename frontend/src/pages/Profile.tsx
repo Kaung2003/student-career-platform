@@ -8,6 +8,7 @@ import { SKILL_SUGGESTIONS } from "../lib/profile";
 import { PageHeader } from "../components/PageHeader";
 import { PROFILE_UPDATED_EVENT } from "../components/AppLayout";
 import { AiImproveButton } from "../components/AiImproveButton";
+import { CompanyVisibilityCard } from "../components/CompanyVisibilityCard";
 import { Card } from "../components/ui/Card";
 import { Field, inputClass } from "../components/ui/Field";
 import { Button } from "../components/ui/Button";
@@ -50,6 +51,7 @@ export function Profile() {
   const [website, setWebsite] = useState("");
   const [resumeUrl, setResumeUrl] = useState("");
   const [transcriptUrl, setTranscriptUrl] = useState("");
+  const [visibleToCompanies, setVisibleToCompanies] = useState(false);
 
   useEffect(() => {
     api
@@ -68,6 +70,7 @@ export function Profile() {
         setWebsite(p.website ?? "");
         setResumeUrl(p.resumeUrl ?? "");
         setTranscriptUrl(p.transcriptUrl ?? "");
+        setVisibleToCompanies(Boolean(p.companyVisibleSince));
       })
       .finally(() => setLoading(false));
   }, []);
@@ -149,6 +152,8 @@ export function Profile() {
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
+          <CompanyVisibilityCard visible={visibleToCompanies} onChange={setVisibleToCompanies} />
+
           <Section title={t("profile.aboutTitle")} description={t("profile.aboutDescription")}>
             <Field label={t("profile.headline")} action={<AiImproveButton kind="headline" text={headline} context={aiContext} onResult={setHeadline} />}>
               <input

@@ -99,6 +99,7 @@ const companySections: Section[] = [
     title: "nav.company",
     items: [
       { to: "/company", label: "common.dashboard", icon: DashboardIcon },
+      { to: "/company/students", label: "company.searchTitle", icon: SearchIcon },
       { to: "/company/profile", label: "company.profileTitle", icon: BuildingIcon },
     ],
   },

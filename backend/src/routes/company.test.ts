@@ -2,6 +2,7 @@ import request from "supertest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { app, resetDatabase, signUp } from "../test/helpers.js";
 import { prisma } from "../lib/prisma.js";
+import { drainEmailQueue } from "../lib/email-queue.js";
 
 const sentEmails: { to: string; subject: string; text: string }[] = [];
 vi.mock("../lib/email.js", async (importOriginal) => ({
@@ -23,6 +24,7 @@ const details = {
 async function registerCompany(overrides: Partial<typeof details> = {}) {
   const res = await request(app).post("/api/company/register").send({ ...details, ...overrides });
   expect(res.status).toBe(201);
+  await drainEmailQueue();
   const token = /token=([\w-]+)/.exec(sentEmails.at(-1)!.text)![1];
   const agent = request.agent(app);
   await agent.post("/api/auth/verify-email").send({ token }).expect(200);
@@ -98,6 +100,7 @@ describe("admin review", () => {
     await admin.post(`/api/admin/companies/${id}/review`).send({ status: "APPROVED" }).expect(200);
 
     expect((await company.get("/api/company/me")).body.company.status).toBe("APPROVED");
+    await drainEmailQueue();
     expect(sentEmails.at(-1)).toMatchObject({ to: details.email, subject: "Your company account is approved" });
     expect(await prisma.auditLog.count({ where: { action: "company.approved" } })).toBe(1);
   });

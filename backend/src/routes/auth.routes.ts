@@ -11,7 +11,8 @@ import { HttpError, parse } from "../lib/http.js";
 import { email, password, personName } from "../lib/schemas.js";
 import { clearSessionCookie, setSessionCookie } from "../lib/session.js";
 import { loginLimiter, signupLimiter } from "../lib/rate-limit.js";
-import { appUrl, isEmailConfigured, sendEmail } from "../lib/email.js";
+import { appUrl, isEmailConfigured } from "../lib/email.js";
+import { enqueueEmail } from "../lib/email-queue.js";
 import { googleClientId, verifyGoogleCredential } from "../lib/google.js";
 
 export const SALT_ROUNDS = 10;
@@ -44,8 +45,8 @@ async function createProfile(userId: string, name: string) {
 }
 
 /**
- * Saves a fresh one-day verification link (older unused links stop working), then emails it
- * in the background: the caller never waits on, or fails because of, the email provider.
+ * Saves a fresh one-day verification link (older unused links stop working), then queues the
+ * email: the caller never waits on, or fails because of, the email provider.
  */
 export async function sendVerificationEmail(user: { id: string; name: string; email: string }) {
   const token = randomBytes(32).toString("base64url");
@@ -57,11 +58,11 @@ export async function sendVerificationEmail(user: { id: string; name: string; em
   ]);
 
   const link = `${appUrl()}/verify-email?token=${token}`;
-  void sendEmail(
+  await enqueueEmail(
     user.email,
     "Confirm your email for Student Career Platform",
     `Hi ${user.name},\n\nWelcome to Student Career Platform! Please confirm your email address by opening this link within 24 hours:\n\n${link}\n\nIf you didn't create an account, you can ignore this email.`,
-  ).catch((err) => console.error("Failed to send verification email", err));
+  );
 }
 
 /** Public settings the login and sign-up pages need. */
@@ -234,11 +235,11 @@ authRouter.post("/forgot-password", signupLimiter, async (req, res) => {
     });
 
     const link = `${appUrl()}/reset-password?token=${token}`;
-    void sendEmail(
-        user.email,
-        "Reset your Student Career Platform password",
-        `Hi ${user.name},\n\nSomeone asked to reset the password for your account. Open this link within one hour to choose a new password:\n\n${link}\n\nIf you didn't ask for this, you can ignore this email — your password won't change.`,
-    ).catch((err) => console.error("Failed to send password reset email", err));
+    await enqueueEmail(
+      user.email,
+      "Reset your Student Career Platform password",
+      `Hi ${user.name},\n\nSomeone asked to reset the password for your account. Open this link within one hour to choose a new password:\n\n${link}\n\nIf you didn't ask for this, you can ignore this email — your password won't change.`,
+    );
   }
 
   // Same answer whether or not the account exists, so this can't be used to discover emails.

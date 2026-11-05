@@ -161,6 +161,8 @@ model StudentProfile {
   website   String?
   resumeUrl String?
   transcriptUrl String?
+  // When the student chose to appear in company search. Null = hidden, which is the default.
+  companyVisibleSince DateTime?
 
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId    String   @unique
@@ -168,9 +170,12 @@ model StudentProfile {
   projects  Project[]
   comments  Comment[]
   views     ProfileView[]
+  companyActivity CompanyActivity[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([companyVisibleSince])
 }
 
 model Comment {
@@ -320,8 +325,61 @@ model Company {
   user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId      String        @unique
 
+  activity    CompanyActivity[]
+
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 
   @@index([status, createdAt])
+}
+
+enum CompanyActivityType {
+  SEARCH
+  VIEW
+}
+
+// What approved companies do with student data. Search text is deliberately not stored.
+model CompanyActivity {
+  id   String              @id @default(cuid())
+  type CompanyActivityType
+
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  companyId String
+
+  // The student whose portfolio was viewed. Null for searches.
+  profile   StudentProfile? @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  profileId String?
+
+  createdAt DateTime @default(now())
+
+  @@index([type, createdAt])
+  @@index([companyId, createdAt])
+  @@index([profileId])
+}
+
+// Emails waiting to be sent, so a provider outage or a restart doesn't lose them.
+model EmailJob {
+  id       String @id @default(cuid())
+  to       String
+  subject  String
+  // Encrypted: confirmation and reset emails contain links that log someone in.
+  body     String
+  attempts Int    @default(0)
+  runAt    DateTime @default(now())
+  // Set when every retry has failed; the body is erased at that point.
+  failedAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([failedAt, runAt])
+}
+
+// Rate-limit counters, shared between servers and kept across restarts.
+model RateLimitCounter {
+  // SHA-256 of the limiter's key, so email addresses and IPs aren't stored.
+  key     String   @id
+  hits    Int
+  resetAt DateTime
+
+  @@index([resetAt])
 }

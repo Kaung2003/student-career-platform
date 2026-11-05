@@ -65,7 +65,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     abortRef.current?.abort();
     setActive(null);
     setError(null);
-    if (!user) {
+    if (!user || user.role === "EMPLOYER") {
       setConversations([]);
       setConfigured(null);
       return;

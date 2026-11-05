@@ -87,6 +87,16 @@ export function CompanyDashboard() {
         </Card>
       )}
 
+      {company?.status === "APPROVED" && (
+        <Card>
+          <h2 className="font-semibold text-slate-900 dark:text-white">{t("company.searchTitle")}</h2>
+          <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">{t("company.searchDescription")}</p>
+          <Link to="/company/students" className={`${buttonClass("primary", "sm")} mt-3`}>
+            {t("company.findStudents")}
+          </Link>
+        </Card>
+      )}
+
       <Card>
         <h2 className="font-semibold text-slate-900 dark:text-white">{t("company.comingTitle")}</h2>
         <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">{t("company.comingMessage")}</p>

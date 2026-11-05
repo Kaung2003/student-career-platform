@@ -1,4 +1,4 @@
-# Render Blueprint: deploys the Express API (backend/) and a managed Postgres database.
+# Render Blueprint: deploys the Express API (backend/). The database is hosted on Neon, not Render.
 # In Render: New → Blueprint → select this repo. You'll be prompted for the secret values.
 
 services:
@@ -14,10 +14,9 @@ services:
     envVars:
       - key: NODE_VERSION
         value: "22"
+      # Your Neon connection string.
       - key: DATABASE_URL
-        fromDatabase:
-          name: student-career-platform-db
-          property: connectionString
+        sync: false
       - key: JWT_SECRET
         generateValue: true
       # Your Netlify URL, e.g. https://your-site.netlify.app (comma-separate multiple origins).
@@ -48,6 +47,9 @@ services:
       # Comma-separated emails that are promoted to admin when they log in.
       - key: ADMIN_EMAILS
         sync: false
+      # Optional: error alerts from https://sentry.io.
+      - key: SENTRY_DSN
+        sync: false
       # Optional: Cloudflare R2 storage for resume/transcript/image uploads.
       - key: R2_ACCOUNT_ID
         sync: false
@@ -59,10 +61,3 @@ services:
         sync: false
       - key: R2_PUBLIC_URL
         sync: false
-
-databases:
-  - name: student-career-platform-db
-    plan: free
-    region: oregon
-    databaseName: career_platform
-    user: career_platform

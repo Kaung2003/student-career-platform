@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { app, resetDatabase, signUp } from "../test/helpers.js";
 import { prisma } from "../lib/prisma.js";
 import { signAuthToken } from "../lib/jwt.js";
+import { drainEmailQueue } from "../lib/email-queue.js";
 
 const sentEmails: { to: string; text: string }[] = [];
 let emailProviderDown = false;
@@ -37,6 +38,7 @@ describe("registration with a password", () => {
     expect(res.status).toBe(201);
     expect(res.body).toEqual({ verificationRequired: true, email: "ada@example.test" });
     expect(res.headers["set-cookie"]).toBeUndefined();
+    await drainEmailQueue();
 
     const profile = await prisma.studentProfile.findFirst({ where: { user: { email: "ada@example.test" } } });
     expect(profile?.slug).toBe("ada-lovelace");
@@ -52,6 +54,7 @@ describe("registration with a password", () => {
 
   it("confirms the email from the link and logs the user in", async () => {
     await request(app).post("/api/auth/register").send({ name: "Grace", email: "grace@example.test", password: "cobol-forever" });
+    await drainEmailQueue();
     const token = linkToken(sentEmails[0]!.text);
 
     const agent = request.agent(app);
@@ -79,9 +82,11 @@ describe("registration with a password", () => {
   it("resends the link only for unconfirmed accounts", async () => {
     await request(app).post("/api/auth/register").send({ name: "Lin", email: "lin@example.test", password: "long-enough-pw" });
     await request(app).post("/api/auth/resend-verification").send({ email: "lin@example.test" }).expect(200);
+    await drainEmailQueue();
     expect(sentEmails).toHaveLength(2);
 
     await request(app).post("/api/auth/resend-verification").send({ email: "nobody@example.test" }).expect(200);
+    await drainEmailQueue();
     expect(sentEmails).toHaveLength(2);
   });
 
@@ -219,6 +224,7 @@ describe("ending sessions when the password changes", () => {
     const { agent, user } = await signUp();
     sentEmails.length = 0;
     await request(app).post("/api/auth/forgot-password").send({ email: user.email }).expect(200);
+    await drainEmailQueue();
     const token = linkToken(sentEmails[0]!.text);
 
     await request(app).post("/api/auth/reset-password").send({ token, password: "brand-new-password" }).expect(200);
@@ -239,6 +245,7 @@ describe("password reset", () => {
 
     const forgot = await request(app).post("/api/auth/forgot-password").send({ email: user.email });
     expect(forgot.status).toBe(200);
+    await drainEmailQueue();
     expect(sentEmails).toHaveLength(1);
 
     const token = /token=([\w-]+)/.exec(sentEmails[0]!.text)?.[1];
@@ -257,6 +264,7 @@ describe("password reset", () => {
   it("answers the same way for unknown emails, without sending anything", async () => {
     const res = await request(app).post("/api/auth/forgot-password").send({ email: "nobody@example.test" });
     expect(res.status).toBe(200);
+    await drainEmailQueue();
     expect(sentEmails).toHaveLength(0);
   });
 });

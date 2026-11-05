@@ -1,6 +1,7 @@
 import request from "supertest";
 import { createApp } from "../app.js";
 import { prisma } from "../lib/prisma.js";
+import { drainEmailQueue } from "../lib/email-queue.js";
 
 // One server bound to 127.0.0.1 for the whole file. Connecting by IP (not "localhost")
 // avoids slow name lookups that made random tests stall on some machines.
@@ -42,6 +43,7 @@ export async function signUp(overrides: { name?: string; email?: string; passwor
   if (res.status !== 201) {
     throw new Error(`signUp failed: ${res.status} ${JSON.stringify(res.body)}`);
   }
+  await drainEmailQueue();
 
   // Skip the inbox step: mark the email confirmed, then log in for a session cookie.
   await prisma.user.update({

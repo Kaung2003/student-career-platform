@@ -54,7 +54,18 @@ export interface StudentProfile {
   website: string | null;
   resumeUrl: string | null;
   transcriptUrl: string | null;
+  companyVisibleSince: string | null;
   projects?: Project[];
+}
+
+export interface StudentSearchResult {
+  name: string;
+  slug: string;
+  headline: string | null;
+  school: string | null;
+  gradYear: number | null;
+  skills: string[];
+  projectCount: number;
 }
 
 export type CertStatus = "PLANNING" | "IN_PROGRESS" | "COMPLETED";
@@ -128,6 +139,7 @@ export type FeedbackStatus = "NEW" | "IN_PROGRESS" | "RESOLVED";
 export interface AdminStats {
   totals: {
     pendingCompanies: number;
+    failedEmails: number;
     users: number;
     newUsers: number;
     admins: number;
@@ -138,6 +150,14 @@ export interface AdminStats {
     openFeedback: number;
     comments: number;
     questions: number;
+  };
+  outcomes: {
+    students: number;
+    completeProfiles: number;
+    visibleStudents: number;
+    approvedCompanies: number;
+    companySearches: number;
+    companyViews: number;
   };
   signups: { date: string; count: number }[];
   latestUsers: { id: string; name: string; email: string; role: Role; createdAt: string }[];

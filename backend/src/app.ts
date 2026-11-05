@@ -22,6 +22,7 @@ import { isEmailConfigured } from "./lib/email.js";
 import { HttpError } from "./lib/http.js";
 import { apiLimiter } from "./lib/rate-limit.js";
 import { prisma } from "./lib/prisma.js";
+import { reportError } from "./lib/monitoring.js";
 
 export function createApp() {
   const app = express();
@@ -101,17 +102,7 @@ export function createApp() {
       return;
     }
 
-    console.error(
-      JSON.stringify({
-        level: "error",
-        requestId: res.locals["requestId"],
-        method: req.method,
-        path: req.path,
-        userId: req.auth?.userId,
-        message: err instanceof Error ? err.message : String(err),
-        stack: err instanceof Error ? err.stack : undefined,
-      }),
-    );
+    reportError(err, { requestId: res.locals["requestId"], method: req.method, path: req.path, userId: req.auth?.userId });
     if (!res.headersSent) {
       res.status(500).json({ error: "Something went wrong on our side. Please try again.", requestId: res.locals["requestId"] });
     }

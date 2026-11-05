@@ -1,7 +1,7 @@
 import { createHash } from "crypto";
 import { Router } from "express";
 import { z } from "zod";
-import { optionalAuth, requireAuth } from "../middleware/require-auth.js";
+import { blockEmployers, optionalAuth, requireAuth } from "../middleware/require-auth.js";
 import { prisma } from "../lib/prisma.js";
 import { HttpError, parse } from "../lib/http.js";
 import { clientIp } from "../lib/client-ip.js";
@@ -66,6 +66,17 @@ async function recordView(profileId: string, ip: string) {
   }
 }
 
+async function recordCompanyView(userId: string, profileId: string) {
+  try {
+    const company = await prisma.company.findUnique({ where: { userId }, select: { id: true, status: true } });
+    if (company?.status === "APPROVED") {
+      await prisma.companyActivity.create({ data: { type: "VIEW", companyId: company.id, profileId } });
+    }
+  } catch (err) {
+    console.error("Failed to record company view", err);
+  }
+}
+
 publicRouter.get("/:slug", optionalAuth, async (req, res) => {
   const profile = await prisma.studentProfile.findUnique({
     where: { slug: req.params["slug"] as string },
@@ -92,6 +103,9 @@ publicRouter.get("/:slug", optionalAuth, async (req, res) => {
   // Count visits from everyone except the owner; crawlers asking only for share-preview data opt out.
   if (req.auth?.userId !== profile.userId && req.query["track"] !== "0") {
     void recordView(profile.id, clientIp(req));
+    if (req.auth?.role === "EMPLOYER") {
+      void recordCompanyView(req.auth.userId, profile.id);
+    }
   }
 
   res.json({
@@ -145,7 +159,8 @@ const commentSchema = z.object({
   body: z.string().trim().min(1, "is required").max(1000, "must be at most 1000 characters"),
 });
 
-publicRouter.post("/:slug/comments", requireAuth, async (req, res) => {
+// Companies reach students through contact requests they can decline, not public comments.
+publicRouter.post("/:slug/comments", requireAuth, blockEmployers, async (req, res) => {
   const { body } = parse(commentSchema, req.body);
   const profile = await profileBySlugOr404(req.params["slug"] as string);
 

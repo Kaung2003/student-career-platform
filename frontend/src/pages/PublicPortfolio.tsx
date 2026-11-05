@@ -307,7 +307,7 @@ export function PublicPortfolio() {
         )}
 
         <Section title={t("portfolio.comments", { count: comments.length })}>
-          {user ? (
+          {user?.role === "EMPLOYER" ? null : user ? (
             <form onSubmit={handleCommentSubmit} className="flex gap-3">
               <Avatar name={user.name} size="sm" />
               <div className="flex-1 space-y-2">

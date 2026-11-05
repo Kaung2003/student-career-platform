@@ -65,6 +65,22 @@ profileRouter.put("/me", async (req, res) => {
   res.json({ profile });
 });
 
+/** The student's own choice to appear in company search. Off until they turn it on. */
+profileRouter.put("/me/visibility", async (req, res) => {
+  const { visible } = parse(z.strictObject({ visible: z.boolean() }), req.body);
+  const profile = await prisma.studentProfile.findUnique({ where: { userId: req.auth!.userId } });
+  if (!profile) {
+    throw new HttpError(404, "Save your profile first");
+  }
+
+  const updated = await prisma.studentProfile.update({
+    where: { id: profile.id },
+    // Keeps the original date when it's already on: it records when the student agreed.
+    data: { companyVisibleSince: visible ? (profile.companyVisibleSince ?? new Date()) : null },
+  });
+  res.json({ profile: updated });
+});
+
 const DAY = 24 * 60 * 60 * 1000;
 
 /** Portfolio views for the owner's dashboard: totals plus a 14-day series. */

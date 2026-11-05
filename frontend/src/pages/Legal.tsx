@@ -3,7 +3,7 @@ import { Footer } from "../components/Footer";
 import { useI18n } from "../i18n/I18nContext";
 import type { MessageKey } from "../i18n/locales/en";
 
-const LAST_UPDATED = "2026-10-26";
+const LAST_UPDATED = "2026-11-05";
 
 const PAGES: Record<"privacy" | "terms", { title: MessageKey; intro: MessageKey; sections: [MessageKey, MessageKey][] }> = {
   privacy: {
@@ -14,6 +14,7 @@ const PAGES: Record<"privacy" | "terms", { title: MessageKey; intro: MessageKey;
       ["privacy.useTitle", "privacy.use"],
       ["privacy.aiTitle", "privacy.ai"],
       ["privacy.publicTitle", "privacy.public"],
+      ["privacy.companiesTitle", "privacy.companies"],
       ["privacy.controlTitle", "privacy.control"],
       ["privacy.contactTitle", "privacy.contact"],
     ],
@@ -25,6 +26,7 @@ const PAGES: Record<"privacy" | "terms", { title: MessageKey; intro: MessageKey;
       ["terms.useTitle", "terms.use"],
       ["terms.contentTitle", "terms.content"],
       ["terms.conductTitle", "terms.conduct"],
+      ["terms.companiesTitle", "terms.companies"],
       ["terms.aiTitle", "terms.ai"],
       ["terms.availabilityTitle", "terms.availability"],
       ["terms.changesTitle", "terms.changes"],

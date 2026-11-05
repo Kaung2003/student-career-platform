@@ -5,7 +5,8 @@ import type { Prisma } from "../generated/prisma/client.js";
 import { audit } from "../lib/audit.js";
 import { notify } from "../lib/notify.js";
 import { emailMatchesWebsite } from "../lib/company.js";
-import { sendEmail, appUrl } from "../lib/email.js";
+import { appUrl } from "../lib/email.js";
+import { enqueueEmail } from "../lib/email-queue.js";
 import { parse, HttpError } from "../lib/http.js";
 import { z } from "zod";
 
@@ -32,7 +33,9 @@ adminRouter.get("/stats", async (_req, res) => {
   since14.setHours(0, 0, 0, 0);
   const since7 = new Date(now - 7 * DAY);
 
-  const [users, newUsers, admins, suspended, projects, certifications, attempts, openFeedback, comments, questions, recentUsers, pendingCompanies] =
+  const since30 = new Date(now - 30 * DAY);
+
+  const [users, newUsers, admins, suspended, projects, certifications, attempts, openFeedback, comments, questions, recentUsers, pendingCompanies, students, completeProfiles, visibleStudents, approvedCompanies, companySearches, companyViews, failedEmails] =
     await Promise.all([
       prisma.user.count(),
       prisma.user.count({ where: { createdAt: { gte: since7 } } }),
@@ -46,6 +49,14 @@ adminRouter.get("/stats", async (_req, res) => {
       prisma.interviewQuestion.count(),
       prisma.user.findMany({ where: { createdAt: { gte: since14 } }, select: { createdAt: true } }),
       prisma.company.count({ where: { status: "PENDING", user: { emailVerified: { not: null } } } }),
+      prisma.user.count({ where: { role: "STUDENT" } }),
+      // "Complete" means a company would have something to judge: a headline, a skill and a project.
+      prisma.studentProfile.count({ where: { headline: { not: null }, skills: { isEmpty: false }, projects: { some: {} } } }),
+      prisma.studentProfile.count({ where: { companyVisibleSince: { not: null } } }),
+      prisma.company.count({ where: { status: "APPROVED" } }),
+      prisma.companyActivity.count({ where: { type: "SEARCH", createdAt: { gte: since30 } } }),
+      prisma.companyActivity.count({ where: { type: "VIEW", createdAt: { gte: since30 } } }),
+      prisma.emailJob.count({ where: { failedAt: { not: null } } }),
     ]);
 
   const signups: { date: string; count: number }[] = [];
@@ -75,7 +86,8 @@ adminRouter.get("/stats", async (_req, res) => {
   ]);
 
   res.json({
-    totals: { users, newUsers, admins, suspended, projects, certifications, attempts, openFeedback, comments, questions, pendingCompanies },
+    totals: { users, newUsers, admins, suspended, projects, certifications, attempts, openFeedback, comments, questions, pendingCompanies, failedEmails },
+    outcomes: { students, completeProfiles, visibleStudents, approvedCompanies, companySearches, companyViews },
     signups,
     latestUsers,
     latestFeedback: latestFeedback.map((f) => ({
@@ -137,13 +149,13 @@ adminRouter.post("/companies/:id/review", async (req, res) => {
   await audit(req.auth!.userId, `company.${body.status.toLowerCase()}`, "Company", company.id, { name: company.name });
 
   const approved = body.status === "APPROVED";
-  void sendEmail(
+  await enqueueEmail(
     company.user.email,
     approved ? "Your company account is approved" : "Your company account wasn't approved",
     approved
       ? `Hi ${company.user.name},\n\n${company.name} has been approved on Student Career Platform. You can log in here:\n\n${appUrl()}/company`
       : `Hi ${company.user.name},\n\n${company.name} wasn't approved on Student Career Platform.${body.note ? `\n\nReason: ${body.note}` : ""}\n\nYou can update your company details and submit again here:\n\n${appUrl()}/company/profile`,
-  ).catch((err) => console.error("Failed to send company review email", err));
+  );
 
   res.json({ company: updated });
 });

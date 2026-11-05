@@ -4,9 +4,10 @@ import { z } from "zod";
 import { requireAuth, requireEmployer } from "../middleware/require-auth.js";
 import { prisma } from "../lib/prisma.js";
 import { HttpError, parse } from "../lib/http.js";
-import { signupLimiter } from "../lib/rate-limit.js";
+import { companySearchLimiter, signupLimiter } from "../lib/rate-limit.js";
 import { email, optionalText, password, personName } from "../lib/schemas.js";
 import { isFreeEmail } from "../lib/company.js";
+import { searchStudents } from "../lib/student-search.js";
 import { SALT_ROUNDS, sendVerificationEmail } from "./auth.routes.js";
 
 export const companyRouter = Router();
@@ -85,4 +86,39 @@ companyRouter.put("/me", async (req, res) => {
     update: { ...body, ...(backToReview ? { status: "PENDING" as const, reviewNote: null, reviewedAt: null } : {}) },
   });
   res.json({ company });
+});
+
+/** Student data is only for companies an admin has checked. */
+async function approvedCompany(userId: string) {
+  const company = await prisma.company.findUnique({ where: { userId }, select: { id: true, status: true } });
+  if (company?.status !== "APPROVED") {
+    throw new HttpError(403, "Your company needs to be approved before you can search for students.", "COMPANY_NOT_APPROVED");
+  }
+  return company;
+}
+
+const searchSchema = z.object({
+  q: z.string().trim().max(100).optional(),
+  school: z.string().trim().max(120).optional(),
+  // Comma-separated, e.g. "React,Python". A student needs all of them.
+  skills: z
+    .string()
+    .max(300)
+    .transform((v) => v.split(",").map((s) => s.trim()).filter(Boolean).slice(0, 10))
+    .optional(),
+  gradYear: z.coerce.number().int().min(1950).max(2100).optional(),
+  page: z.coerce.number().int().min(1).max(500).default(1),
+});
+
+/** Finds students who chose to be visible. Results never include contact details. */
+companyRouter.get("/students", companySearchLimiter, async (req, res) => {
+  const company = await approvedCompany(req.auth!.userId);
+  const filters = parse(searchSchema, req.query);
+
+  const result = await searchStudents(filters);
+
+  if (filters.page === 1) {
+    await prisma.companyActivity.create({ data: { type: "SEARCH", companyId: company.id } });
+  }
+  res.json(result);
 });

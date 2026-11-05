@@ -139,6 +139,12 @@ export function AdminOverview() {
         </Link>
       )}
 
+      {totals.failedEmails > 0 && (
+        <p className="mb-6 rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700 dark:bg-red-500/10 dark:text-red-300">
+          {t("admin.overview.failedEmails", { count: totals.failedEmails })}
+        </p>
+      )}
+
       <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         {tiles.map((tile) => (
           <Link key={tile.label} to={tile.to} className="group">
@@ -152,6 +158,26 @@ export function AdminOverview() {
           </Link>
         ))}
       </div>
+
+      <Card>
+        <h2 className="font-semibold text-slate-900 dark:text-white">{t("admin.overview.outcomes")}</h2>
+        <p className="text-sm text-slate-500 dark:text-slate-400">{t("admin.overview.outcomesHint")}</p>
+        <dl className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+          {[
+            [t("admin.overview.students"), stats.outcomes.students],
+            [t("admin.overview.completeProfiles"), stats.outcomes.completeProfiles],
+            [t("admin.overview.visibleStudents"), stats.outcomes.visibleStudents],
+            [t("admin.overview.approvedCompanies"), stats.outcomes.approvedCompanies],
+            [t("admin.overview.companySearches"), stats.outcomes.companySearches],
+            [t("admin.overview.companyViews"), stats.outcomes.companyViews],
+          ].map(([label, value]) => (
+            <div key={label}>
+              <dd className="text-2xl font-semibold tabular-nums text-slate-900 dark:text-white">{value}</dd>
+              <dt className="mt-1 text-xs text-slate-500 dark:text-slate-400">{label}</dt>
+            </div>
+          ))}
+        </dl>
+      </Card>
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
