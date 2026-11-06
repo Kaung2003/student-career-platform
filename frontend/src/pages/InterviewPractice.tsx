@@ -83,20 +83,27 @@ export function InterviewPractice() {
       .get<{ configured: boolean }>("/interview/status")
       .then((res) => setConfigured(res.configured))
       .catch(() => setConfigured(false));
+  }, []);
+
+  // Questions and past attempts come back in the chosen language, so reload them when it changes.
+  useEffect(() => {
     api
-      .get<{ attempts: InterviewAttempt[] }>("/interview/attempts")
+      .get<{ attempts: InterviewAttempt[] }>(`/interview/attempts?lang=${language}`)
       .then((res) => setAttempts(res.attempts))
       .catch(() => {});
-  }, []);
+  }, [language]);
 
   useEffect(() => {
     setLoadingQuestions(true);
-    const query = category === "ALL" ? "" : `?category=${category}`;
+    const params = new URLSearchParams({ lang: language, ...(category === "ALL" ? {} : { category }) });
     api
-      .get<{ questions: InterviewQuestion[] }>(`/interview/questions${query}`)
-      .then((res) => setQuestions(res.questions))
+      .get<{ questions: InterviewQuestion[] }>(`/interview/questions?${params}`)
+      .then((res) => {
+        setQuestions(res.questions);
+        setSelected((current) => (current && res.questions.find((q) => q.id === current.id)) || current);
+      })
       .finally(() => setLoadingQuestions(false));
-  }, [category]);
+  }, [category, language]);
 
   useEffect(() => {
     if (!timing) return;
@@ -144,7 +151,7 @@ export function InterviewPractice() {
     const recognition = new SpeechRecognitionCtor();
     recognition.continuous = true;
     recognition.interimResults = true;
-    recognition.lang = "en-US";
+    recognition.lang = locale;
 
     recognition.onresult = (event) => {
       let finalText = "";
@@ -182,7 +189,7 @@ export function InterviewPractice() {
         language: aiLanguageName(language),
       });
       setFeedback(res.feedback ?? t("interview.savedNoFeedback"));
-      const attemptsRes = await api.get<{ attempts: InterviewAttempt[] }>("/interview/attempts");
+      const attemptsRes = await api.get<{ attempts: InterviewAttempt[] }>(`/interview/attempts?lang=${language}`);
       setAttempts(attemptsRes.attempts);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t("interview.submitFailed"));
@@ -234,7 +241,7 @@ export function InterviewPractice() {
             ))}
           </div>
 
-          {language !== "en" && (
+          {!loadingQuestions && questions.some((q) => !q.translated) && (
             <p className="mb-3 text-xs text-slate-500 dark:text-slate-400">{t("interview.questionLanguageNote")}</p>
           )}
           <div className="space-y-2 lg:max-h-[calc(100vh-18rem)] lg:overflow-y-auto lg:pr-1">

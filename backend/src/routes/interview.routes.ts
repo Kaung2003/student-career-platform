@@ -6,6 +6,7 @@ import { complete, isAiConfigured, languageInstruction } from "../lib/ai.js";
 import { HttpError, parse } from "../lib/http.js";
 import { aiLanguage } from "../lib/schemas.js";
 import { aiLimiter } from "../lib/rate-limit.js";
+import { localizeQuestion } from "../lib/interview-translations.js";
 
 export const interviewRouter = Router();
 
@@ -23,14 +24,14 @@ interviewRouter.get("/status", (_req, res) => {
 });
 
 interviewRouter.get("/questions", async (req, res) => {
-  const category = req.query["category"];
+  const { category, lang } = req.query;
 
   const questions = await prisma.interviewQuestion.findMany({
     where: { ...(isCategory(category) ? { category } : {}) },
     orderBy: { createdAt: "asc" },
   });
 
-  res.json({ questions });
+  res.json({ questions: questions.map((question) => localizeQuestion(question, lang ?? "en")) });
 });
 
 interviewRouter.get("/attempts", async (req, res) => {
@@ -41,7 +42,8 @@ interviewRouter.get("/attempts", async (req, res) => {
     take: 20,
   });
 
-  res.json({ attempts });
+  const lang = req.query["lang"] ?? "en";
+  res.json({ attempts: attempts.map((attempt) => ({ ...attempt, question: localizeQuestion(attempt.question, lang) })) });
 });
 
 const practiceSchema = z.object({

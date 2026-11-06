@@ -367,7 +367,7 @@ export const ja: Record<MessageKey, string> = {
   "interview.history": "練習履歴",
   "interview.yourAnswer": "あなたの回答",
   "interview.feedback": "フィードバック",
-  "interview.questionLanguageNote": "質問は英語で表示されます。フィードバックは選択した言語で届きます。",
+  "interview.questionLanguageNote": "一部の質問は英語のみです。フィードバックは選択した言語で届きます。",
 
   // Feedback
   "feedback.title": "フィードバック",

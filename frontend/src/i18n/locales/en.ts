@@ -372,7 +372,7 @@ export const en = {
   "interview.history": "Practice history",
   "interview.yourAnswer": "Your answer",
   "interview.feedback": "Feedback",
-  "interview.questionLanguageNote": "Questions are shown in English; your feedback comes in your selected language.",
+  "interview.questionLanguageNote": "Some questions are only available in English. Your feedback still comes in your selected language.",
 
   // Feedback
   "feedback.title": "Feedback",

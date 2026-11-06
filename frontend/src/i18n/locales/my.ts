@@ -368,7 +368,7 @@ export const my: Record<MessageKey, string> = {
   "interview.history": "လေ့ကျင့်မှု မှတ်တမ်း",
   "interview.yourAnswer": "သင့်အဖြေ",
   "interview.feedback": "အကြံပြုချက်",
-  "interview.questionLanguageNote": "မေးခွန်းများကို အင်္ဂလိပ်လို ပြသပါသည်။ အကြံပြုချက်ကို သင်ရွေးထားသော ဘာသာစကားဖြင့် ရရှိပါမည်။",
+  "interview.questionLanguageNote": "မေးခွန်းအချို့ကို အင်္ဂလိပ်လိုသာ ရနိုင်ပါသည်။ အကြံပြုချက်ကို သင်ရွေးထားသော ဘာသာစကားဖြင့် ဆက်လက်ရရှိပါမည်။",
 
   // Feedback
   "feedback.title": "အကြံပြုချက်",

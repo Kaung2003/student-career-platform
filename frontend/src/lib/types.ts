@@ -88,6 +88,8 @@ export interface InterviewQuestion {
   category: InterviewCategory;
   prompt: string;
   tip: string | null;
+  /** False when the question only exists in English (for example, one an admin added). */
+  translated: boolean;
 }
 
 export interface InterviewAttempt {

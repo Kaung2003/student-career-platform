@@ -372,7 +372,7 @@ export const es: Record<MessageKey, string> = {
   "interview.history": "Historial de práctica",
   "interview.yourAnswer": "Tu respuesta",
   "interview.feedback": "Comentarios",
-  "interview.questionLanguageNote": "Las preguntas se muestran en inglés; los comentarios llegan en el idioma que elegiste.",
+  "interview.questionLanguageNote": "Algunas preguntas solo están disponibles en inglés. Los comentarios siguen llegando en el idioma que elegiste.",
 
   // Feedback
   "feedback.title": "Comentarios",

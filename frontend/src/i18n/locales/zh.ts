@@ -367,7 +367,7 @@ export const zh: Record<MessageKey, string> = {
   "interview.history": "练习记录",
   "interview.yourAnswer": "你的回答",
   "interview.feedback": "反馈",
-  "interview.questionLanguageNote": "题目以英文显示；反馈将使用你选择的语言。",
+  "interview.questionLanguageNote": "部分题目仅提供英文版本。反馈仍会使用你选择的语言。",
 
   // Feedback
   "feedback.title": "反馈",
