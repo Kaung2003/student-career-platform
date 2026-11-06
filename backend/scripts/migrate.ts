@@ -22,7 +22,9 @@ function migrationUrl(url: string | undefined) {
   }
 }
 
-const env = { ...process.env, DATABASE_URL: migrationUrl(process.env["DATABASE_URL"]) };
+// Prisma's migration lock is skipped: a lock taken through the pooler earlier was never released,
+// so waiting on it fails every deploy. Render builds one deploy at a time, so nothing else migrates at once.
+const env = { ...process.env, DATABASE_URL: migrationUrl(process.env["DATABASE_URL"]), PRISMA_SCHEMA_DISABLE_ADVISORY_LOCK: "1" };
 
 /** Runs a Prisma command, retrying once: a lock timeout usually means another deploy just finished. */
 function run(command: string) {
