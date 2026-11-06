@@ -829,6 +829,8 @@ export const en = {
   "privacy.companies": "Companies can only search for students after an admin approves them, and you appear in that search only if you turn on \"Show me to companies\" in your profile. You can turn it off at any time. Search results show your name, headline, school, graduation year, skills and number of projects. We record when an approved company views a portfolio, and the date you turned the setting on. We don't give companies your email or transcript.",
   "terms.companiesTitle": "Company accounts",
   "terms.companies": "Company accounts must represent a real organization and use a work email. Student information may only be used for genuine recruiting. We may refuse, remove or suspend a company that misuses it.",
+  "admin.questions.englishOnly": "English only",
+  "admin.questions.writeInEnglish": "Write the question in English. The built-in questions have translations for every language; a question you add or reword is shown in English to everyone.",
 } as const;
 
 export type MessageKey = keyof typeof en;

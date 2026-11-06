@@ -194,6 +194,7 @@ export interface AdminFeedback {
 }
 
 export interface AdminQuestion extends InterviewQuestion {
+  original: { prompt: string; tip: string | null };
   createdAt: string;
   attempts: number;
 }

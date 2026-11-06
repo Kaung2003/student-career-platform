@@ -816,4 +816,6 @@ export const zh: Record<MessageKey, string> = {
   "privacy.companies": "企业只有在管理员批准后才能搜索学生，并且只有当你在个人资料中开启“向企业展示我”时，才会出现在搜索结果中。你可以随时关闭。搜索结果显示你的姓名、简介标题、学校、毕业年份、技能和项目数量。我们会记录已批准企业浏览作品集的情况，以及你开启此设置的日期。我们不会向企业提供你的邮箱或成绩单。",
   "terms.companiesTitle": "企业账户",
   "terms.companies": "企业账户必须代表真实的组织并使用工作邮箱。学生信息只能用于真实的招聘。对于滥用信息的企业，我们可能拒绝、移除或暂停其账户。",
+  "admin.questions.englishOnly": "仅英文",
+  "admin.questions.writeInEnglish": "请用英文填写题目。内置题目已翻译成所有语言；你新增或改写的题目会以英文显示给所有人。",
 };

@@ -829,4 +829,6 @@ export const de: Record<MessageKey, string> = {
   "privacy.companies": "Unternehmen können erst nach der Freigabe durch einen Admin nach Studierenden suchen, und du erscheinst dort nur, wenn du in deinem Profil „Für Unternehmen sichtbar sein“ einschaltest. Du kannst das jederzeit ausschalten. Die Ergebnisse zeigen deinen Namen, deine Kurzbeschreibung, Hochschule, dein Abschlussjahr, deine Fähigkeiten und die Anzahl deiner Projekte. Wir speichern, wann ein freigegebenes Unternehmen ein Portfolio aufruft und wann du die Einstellung eingeschaltet hast. Deine E-Mail-Adresse und dein Zeugnis geben wir nicht an Unternehmen weiter.",
   "terms.companiesTitle": "Unternehmenskonten",
   "terms.companies": "Unternehmenskonten müssen eine echte Organisation vertreten und eine geschäftliche E-Mail-Adresse verwenden. Daten von Studierenden dürfen nur für echte Personalsuche genutzt werden. Bei Missbrauch können wir ein Unternehmen ablehnen, entfernen oder sperren.",
+  "admin.questions.englishOnly": "Nur Englisch",
+  "admin.questions.writeInEnglish": "Schreibe die Frage auf Englisch. Die mitgelieferten Fragen sind in alle Sprachen übersetzt; Fragen, die du hinzufügst oder umformulierst, werden allen auf Englisch angezeigt.",
 };

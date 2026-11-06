@@ -6,6 +6,7 @@ import { audit } from "../lib/audit.js";
 import { notify } from "../lib/notify.js";
 import { emailMatchesWebsite } from "../lib/company.js";
 import { appUrl } from "../lib/email.js";
+import { localizeQuestion } from "../lib/interview-translations.js";
 import { enqueueEmail } from "../lib/email-queue.js";
 import { parse, HttpError } from "../lib/http.js";
 import { z } from "zod";
@@ -345,21 +346,27 @@ function parseQuestion(body: unknown): { category: (typeof CATEGORIES)[number]; 
   return { category, prompt: prompt.trim(), tip: typeof tip === "string" && tip.trim() ? tip.trim() : null };
 }
 
-adminRouter.get("/questions", async (_req, res) => {
+adminRouter.get("/questions", async (req, res) => {
   const questions = await prisma.interviewQuestion.findMany({
     orderBy: [{ category: "asc" }, { createdAt: "asc" }],
     include: { _count: { select: { attempts: true } } },
   });
 
   res.json({
-    questions: questions.map((q) => ({
-      id: q.id,
-      category: q.category,
-      prompt: q.prompt,
-      tip: q.tip,
-      createdAt: q.createdAt,
-      attempts: q._count.attempts,
-    })),
+    questions: questions.map((q) => {
+      const shown = localizeQuestion({ prompt: q.prompt, tip: q.tip }, req.query["lang"] ?? "en");
+      return {
+        id: q.id,
+        category: q.category,
+        prompt: shown.prompt,
+        tip: shown.tip,
+        translated: shown.translated,
+        // Editing always works on the English wording, which the translations are matched to.
+        original: { prompt: q.prompt, tip: q.tip },
+        createdAt: q.createdAt,
+        attempts: q._count.attempts,
+      };
+    }),
   });
 });
 

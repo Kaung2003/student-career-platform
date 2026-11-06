@@ -18,7 +18,7 @@ const emptyForm = { category: "BEHAVIORAL" as InterviewCategory, prompt: "", tip
 
 export function AdminQuestions() {
   const { toast, confirm } = useUi();
-  const { t } = useI18n();
+  const { t, language } = useI18n();
   const categoryLabel = (c: InterviewCategory) => t(`interview.category.${c}`);
   const [questions, setQuestions] = useState<AdminQuestion[]>([]);
   const [loading, setLoading] = useState(true);
@@ -31,14 +31,15 @@ export function AdminQuestions() {
 
   function load() {
     return api
-      .get<{ questions: AdminQuestion[] }>("/admin/questions")
+      .get<{ questions: AdminQuestion[] }>(`/admin/questions?lang=${language}`)
       .then((res) => setQuestions(res.questions))
       .finally(() => setLoading(false));
   }
 
   useEffect(() => {
     void load();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reload only when the language changes
+  }, [language]);
 
   function openNew() {
     setEditingId(null);
@@ -49,7 +50,7 @@ export function AdminQuestions() {
 
   function openEdit(q: AdminQuestion) {
     setEditingId(q.id);
-    setForm({ category: q.category, prompt: q.prompt, tip: q.tip ?? "" });
+    setForm({ category: q.category, prompt: q.original.prompt, tip: q.original.tip ?? "" });
     setError(null);
     setModalOpen(true);
   }
@@ -150,6 +151,7 @@ export function AdminQuestions() {
                   <span className="text-xs text-slate-400">
                     {t("admin.questions.answers", { count: q.attempts })}
                   </span>
+                  {language !== "en" && !q.translated && <Badge>{t("admin.questions.englishOnly")}</Badge>}
                 </div>
                 <p className="mt-2 text-sm font-medium text-slate-900 dark:text-white">{q.prompt}</p>
                 {q.tip && <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{t("admin.questions.tip", { tip: q.tip })}</p>}
@@ -209,6 +211,11 @@ export function AdminQuestions() {
               ))}
             </div>
           </Field>
+          {language !== "en" && (
+            <p className="rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600 dark:bg-slate-800/60 dark:text-slate-400">
+              {t("admin.questions.writeInEnglish")}
+            </p>
+          )}
           <Field label={t("admin.questions.question")}>
             <textarea
               rows={3}

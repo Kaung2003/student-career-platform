@@ -53,6 +53,20 @@ describe("interview questions in the chosen language", () => {
   });
 });
 
+describe("the admin question list", () => {
+  it("shows the chosen language and keeps the English original for editing", async () => {
+    const { agent } = await signUp({ role: "ADMIN" });
+    const { body } = await agent.get("/api/admin/questions?lang=ja").expect(200);
+    const builtIn = body.questions.find((q: { category: string }) => q.category === "SITUATIONAL");
+    expect(builtIn).toMatchObject({
+      prompt: QUESTION_TRANSLATIONS[BUILT_IN]!.ja!.prompt,
+      translated: true,
+      original: { prompt: BUILT_IN },
+    });
+    expect(body.questions.find((q: { category: string }) => q.category === "TECHNICAL").translated).toBe(false);
+  });
+});
+
 it("has a translation in every language for every built-in question", async () => {
   // Keeps the translations in step with the seed: a reworded seed prompt would silently fall back to English.
   const seed = await import("node:fs").then((fs) => fs.readFileSync(new URL("../../prisma/seed-interview-questions.ts", import.meta.url), "utf8"));

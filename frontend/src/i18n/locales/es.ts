@@ -829,4 +829,6 @@ export const es: Record<MessageKey, string> = {
   "privacy.companies": "Las empresas solo pueden buscar estudiantes después de que un administrador las apruebe, y solo apareces en esa búsqueda si activas \"Mostrarme a las empresas\" en tu perfil. Puedes desactivarlo en cualquier momento. Los resultados muestran tu nombre, titular, centro de estudios, año de graduación, habilidades y número de proyectos. Registramos cuándo una empresa aprobada visita un portafolio y la fecha en que activaste el ajuste. No damos a las empresas tu correo ni tu expediente académico.",
   "terms.companiesTitle": "Cuentas de empresa",
   "terms.companies": "Las cuentas de empresa deben representar a una organización real y usar un correo de trabajo. La información de los estudiantes solo puede usarse para contratación genuina. Podemos rechazar, eliminar o suspender a una empresa que haga un mal uso de ella.",
+  "admin.questions.englishOnly": "Solo en inglés",
+  "admin.questions.writeInEnglish": "Escribe la pregunta en inglés. Las preguntas incluidas están traducidas a todos los idiomas; las que añadas o modifiques se mostrarán en inglés a todos.",
 };
