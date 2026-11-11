@@ -109,7 +109,7 @@ function scoreFrom(feedback: string | null) {
 export function Dashboard() {
   const { user } = useAuth();
   const { toast } = useUi();
-  const { t, formatDate } = useI18n();
+  const { t, formatDate, language } = useI18n();
   const [profile, setProfile] = useState<StudentProfile | null>(null);
   const [certifications, setCertifications] = useState<Certification[]>([]);
   const [attempts, setAttempts] = useState<InterviewAttempt[]>([]);
@@ -120,12 +120,19 @@ export function Dashboard() {
     Promise.all([
       api.get<{ profile: StudentProfile | null }>("/profile/me").then((res) => setProfile(res.profile)),
       api.get<{ certifications: Certification[] }>("/certifications").then((res) => setCertifications(res.certifications)),
-      api.get<{ attempts: InterviewAttempt[] }>("/interview/attempts").then((res) => setAttempts(res.attempts)),
       api.get<ViewStats>("/profile/me/views").then(setViews),
     ])
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
+
+  // Past practice questions come back in the chosen language.
+  useEffect(() => {
+    api
+      .get<{ attempts: InterviewAttempt[] }>(`/interview/attempts?lang=${language}`)
+      .then((res) => setAttempts(res.attempts))
+      .catch(() => {});
+  }, [language]);
 
   const checklist = profileChecklist(profile, certifications.length);
   const score = completenessScore(checklist);
