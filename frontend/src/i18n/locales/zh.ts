@@ -819,4 +819,11 @@ export const zh: Record<MessageKey, string> = {
   "admin.questions.englishOnly": "仅英文",
   "admin.questions.writeInEnglish": "请用英文填写题目。内置题目已翻译成所有语言；你新增或改写的题目会以英文显示给所有人。",
   "admin.companies.testTip": "如需亲自试用企业面板，请用在管理员邮箱中加“+”的地址（例如 {example}）进行企业注册。邮件会发到你平常的收件箱。然后在这里批准它。",
+  "portfolio.openToWork": "欢迎工作机会",
+  "portfolio.education": "教育背景",
+  "portfolio.links": "链接",
+  "portfolio.website": "网站",
+  "portfolio.statProjects": "项目",
+  "portfolio.statSkills": "技能",
+  "portfolio.statCertifications": "证书",
 };

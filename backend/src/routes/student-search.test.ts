@@ -44,8 +44,12 @@ describe("student visibility", () => {
     expect(on.body.profile.companyVisibleSince).toBeTruthy();
     expect(names(await company.get("/api/company/students"))).toEqual(["Ada"]);
 
+    const { slug } = await agent.get("/api/profile/me").then((r) => r.body.profile);
+    expect((await request(app).get(`/api/public/${slug}`)).body.openToWork).toBe(true);
+
     await agent.put("/api/profile/me/visibility").send({ visible: false }).expect(200);
     expect((await company.get("/api/company/students")).body.students).toEqual([]);
+    expect((await request(app).get(`/api/public/${slug}`)).body.openToWork).toBe(false);
   });
 
   it("keeps the date the student first agreed", async () => {

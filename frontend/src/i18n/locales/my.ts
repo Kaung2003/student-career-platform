@@ -820,4 +820,11 @@ export const my: Record<MessageKey, string> = {
   "admin.questions.englishOnly": "အင်္ဂလိပ်လိုသာ",
   "admin.questions.writeInEnglish": "မေးခွန်းကို အင်္ဂလိပ်လို ရေးပါ။ မူလပါဝင်သော မေးခွန်းများကို ဘာသာစကားအားလုံးသို့ ဘာသာပြန်ထားပြီး သင်ထည့်သော သို့မဟုတ် ပြင်ဆင်သော မေးခွန်းများကို လူတိုင်းအား အင်္ဂလိပ်လို ပြသပါမည်။",
   "admin.companies.testTip": "ကုမ္ပဏီ panel ကို ကိုယ်တိုင် စမ်းရန် သင့်စီမံသူအီးမေးလ်တွင် \"+\" ပါသော လိပ်စာ (ဥပမာ {example}) ဖြင့် ကုမ္ပဏီအဖြစ် စာရင်းသွင်းပါ။ အီးမေးလ်သည် သင့်ပုံမှန် inbox သို့ ရောက်ပါမည်။ ထို့နောက် ဤနေရာတွင် အတည်ပြုပါ။",
+  "portfolio.openToWork": "အလုပ်အခွင့်အလမ်းများကို ကြိုဆိုသည်",
+  "portfolio.education": "ပညာရေး",
+  "portfolio.links": "လင့်ခ်များ",
+  "portfolio.website": "ဝက်ဘ်ဆိုက်",
+  "portfolio.statProjects": "ပရောဂျက်များ",
+  "portfolio.statSkills": "ကျွမ်းကျင်မှုများ",
+  "portfolio.statCertifications": "လက်မှတ်များ",
 };

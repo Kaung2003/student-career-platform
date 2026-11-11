@@ -18,22 +18,41 @@ import {
   AwardIcon,
   CopyIcon,
   ExternalLinkIcon,
+  FolderIcon,
   FileTextIcon,
   GithubIcon,
   GlobeIcon,
   LinkedinIcon,
   MapPinIcon,
   MessageSquareIcon,
+  SparklesIcon,
   TrashIcon,
 } from "../components/icons";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="mt-12">
-      <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">{title}</h2>
+    <Card>
+      <h2 className="flex items-center gap-2 text-lg font-semibold text-slate-900 dark:text-white">
+        <span className="h-5 w-1 rounded-full bg-gradient-to-b from-blue-500 to-indigo-600" />
+        {title}
+      </h2>
       <div className="mt-4">{children}</div>
-    </section>
+    </Card>
   );
+}
+
+const COVERS = [
+  "from-blue-500 to-indigo-600",
+  "from-emerald-500 to-teal-600",
+  "from-violet-500 to-fuchsia-600",
+  "from-amber-500 to-orange-600",
+  "from-sky-500 to-cyan-600",
+  "from-rose-500 to-pink-600",
+];
+
+/** A colour for projects without a screenshot, so the grid doesn't look empty. Neighbours never match. */
+function coverFor(index: number) {
+  return COVERS[index % COVERS.length];
 }
 
 export function PublicPortfolio() {
@@ -116,7 +135,7 @@ export function PublicPortfolio() {
     return (
       <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
         <Navbar />
-        <div className="mx-auto max-w-4xl space-y-4 px-4 py-16 sm:px-6">
+        <div className="mx-auto max-w-6xl space-y-4 px-4 py-16 sm:px-6">
           <Skeleton className="h-24 w-24 rounded-full" />
           <Skeleton className="h-8 w-64" />
           <Skeleton className="h-4 w-96 max-w-full" />
@@ -146,8 +165,13 @@ export function PublicPortfolio() {
   const links = [
     data.github && { href: data.github, label: "GitHub", icon: GithubIcon },
     data.linkedin && { href: data.linkedin, label: "LinkedIn", icon: LinkedinIcon },
-    data.website && { href: data.website, label: "Website", icon: GlobeIcon },
+    data.website && { href: data.website, label: t("portfolio.website"), icon: GlobeIcon },
   ].filter(Boolean) as { href: string; label: string; icon: typeof GithubIcon }[];
+  const stats = [
+    { label: t("portfolio.statProjects"), value: data.projects.length, icon: FolderIcon },
+    { label: t("portfolio.statSkills"), value: data.skills.length, icon: SparklesIcon },
+    { label: t("portfolio.statCertifications"), value: data.certifications.length, icon: AwardIcon },
+  ];
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
@@ -155,7 +179,7 @@ export function PublicPortfolio() {
 
       {isOwner && (
         <div className="border-b border-blue-100 bg-blue-50 dark:border-blue-500/20 dark:bg-blue-500/10">
-          <div className="mx-auto flex max-w-4xl flex-wrap items-center justify-between gap-2 px-4 py-2.5 text-sm sm:px-6">
+          <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-2 px-4 py-2.5 text-sm sm:px-6">
             <p className="text-blue-800 dark:text-blue-200">{t("portfolio.ownerBanner")}</p>
             <Link to="/profile" className="font-medium text-blue-700 hover:underline dark:text-blue-300">
               {t("portfolio.editProfile")}
@@ -164,218 +188,266 @@ export function PublicPortfolio() {
         </div>
       )}
 
-      <header className="relative overflow-hidden bg-white dark:bg-slate-900">
-        <div className="h-36 bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 sm:h-44" />
-        <div className="mx-auto max-w-4xl px-4 pb-8 sm:px-6">
-          <div className="-mt-12 flex flex-col gap-4 sm:-mt-14 sm:flex-row sm:items-end sm:justify-between">
-            <div className="inline-block w-fit rounded-full ring-4 ring-white dark:ring-slate-900">
-              <Avatar name={data.name} size="xl" />
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <Button variant="secondary" size="sm" onClick={copyLink}>
-                <CopyIcon className="h-4 w-4" /> {t("portfolio.share")}
-              </Button>
-              {data.resumeUrl && (
-                <a href={data.resumeUrl} target="_blank" rel="noreferrer" className={buttonClass("primary", "sm")}>
-                  <FileTextIcon className="h-4 w-4" /> {t("portfolio.resume")}
-                </a>
-              )}
-            </div>
-          </div>
+      {/* Banner: gradient with a soft dot grid, purely decorative. */}
+      <div className="relative h-40 overflow-hidden bg-gradient-to-br from-blue-600 via-indigo-600 to-violet-700 sm:h-52">
+        <div
+          className="absolute inset-0 opacity-20"
+          style={{ backgroundImage: "radial-gradient(rgba(255,255,255,0.7) 1px, transparent 1px)", backgroundSize: "22px 22px" }}
+        />
+        <div className="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-white/10 blur-3xl" />
+        <div className="absolute -bottom-32 left-1/4 h-72 w-72 rounded-full bg-fuchsia-400/20 blur-3xl" />
+      </div>
 
-          <h1 className="mt-4 text-3xl font-semibold tracking-tight text-slate-900 dark:text-white">{data.name}</h1>
-          {data.headline && <p className="mt-1 text-lg text-slate-600 dark:text-slate-300">{data.headline}</p>}
+      <div className="mx-auto max-w-6xl px-4 pb-20 sm:px-6">
+        <div className="grid gap-6 lg:grid-cols-[320px_minmax(0,1fr)] lg:gap-8">
+          {/* Identity card */}
+          <aside className="-mt-20 lg:sticky lg:top-6 lg:self-start">
+            <Card className="relative">
+              <div className="flex flex-col items-center text-center">
+                <div className="rounded-full ring-4 ring-white shadow-lg dark:ring-slate-900">
+                  <Avatar name={data.name} size="xl" />
+                </div>
+                <h1 className="mt-4 text-2xl font-semibold tracking-tight text-slate-900 dark:text-white">{data.name}</h1>
+                {data.headline && <p className="mt-1 text-slate-600 dark:text-slate-300">{data.headline}</p>}
+                {data.openToWork && (
+                  <span className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-300 dark:ring-emerald-500/30">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> {t("portfolio.openToWork")}
+                  </span>
+                )}
+              </div>
 
-          <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-slate-500 dark:text-slate-400">
-            {data.school && (
-              <span className="inline-flex items-center gap-1.5">
-                <MapPinIcon className="h-4 w-4" /> {data.school}
-              </span>
-            )}
-            {data.gradYear && <span>{t("common.classOf", { year: data.gradYear })}</span>}
-            {links.map(({ href, label, icon: Icon }) => (
-              <a
-                key={label}
-                href={href}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-1.5 font-medium text-slate-600 hover:text-blue-600 dark:text-slate-300 dark:hover:text-blue-400"
-              >
-                <Icon className="h-4 w-4" /> {label}
-              </a>
-            ))}
-          </div>
-        </div>
-      </header>
-
-      <main className="mx-auto max-w-4xl px-4 pb-20 sm:px-6">
-        {data.bio && (
-          <Section title={t("portfolio.about")}>
-            <p className="whitespace-pre-line text-base leading-relaxed text-slate-700 dark:text-slate-300">{data.bio}</p>
-          </Section>
-        )}
-
-        {data.skills.length > 0 && (
-          <Section title={t("portfolio.skills")}>
-            <div className="flex flex-wrap gap-2">
-              {data.skills.map((skill) => (
-                <span
-                  key={skill}
-                  className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300"
-                >
-                  {skill}
-                </span>
-              ))}
-            </div>
-          </Section>
-        )}
-
-        <Section title={t("portfolio.projects", { count: data.projects.length })}>
-          {data.projects.length === 0 ? (
-            <p className="text-slate-500 dark:text-slate-400">{t("portfolio.noProjects")}</p>
-          ) : (
-            <div className="grid gap-6 sm:grid-cols-2">
-              {data.projects.map((project) => (
-                <Card key={project.id} padded={false} className="flex flex-col overflow-hidden">
-                  {project.imageUrl && (
-                    <img src={project.imageUrl} alt="" className="aspect-[16/9] w-full object-cover" loading="lazy" />
-                  )}
-                  <div className="flex flex-1 flex-col p-5">
-                    <h3 className="font-semibold text-slate-900 dark:text-white">{project.title}</h3>
-                    {project.description && (
-                      <p className="mt-1.5 text-sm leading-relaxed text-slate-600 dark:text-slate-400">{project.description}</p>
-                    )}
-                    {project.techStack.length > 0 && (
-                      <div className="mt-3 flex flex-wrap gap-1.5">
-                        {project.techStack.map((tech) => (
-                          <Badge key={tech} tone="blue">
-                            {tech}
-                          </Badge>
-                        ))}
-                      </div>
-                    )}
-                    <div className="mt-auto flex gap-4 pt-4 text-sm">
-                      {project.projectUrl && (
-                        <a
-                          href={project.projectUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex items-center gap-1.5 font-medium text-blue-600 hover:underline dark:text-blue-400"
-                        >
-                          <ExternalLinkIcon className="h-4 w-4" /> {t("portfolio.liveDemo")}
-                        </a>
-                      )}
-                      {project.githubUrl && (
-                        <a
-                          href={project.githubUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex items-center gap-1.5 font-medium text-slate-600 hover:underline dark:text-slate-400"
-                        >
-                          <GithubIcon className="h-4 w-4" /> {t("portfolio.sourceCode")}
-                        </a>
-                      )}
+              {(data.school || data.gradYear) && (
+                <div className="mt-6 border-t border-slate-100 pt-5 dark:border-slate-800">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">{t("portfolio.education")}</p>
+                  <div className="mt-3 flex items-start gap-3">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400">
+                      <MapPinIcon className="h-4 w-4" />
                     </div>
+                    <div className="min-w-0 text-sm">
+                      {data.school && <p className="font-medium text-slate-900 dark:text-white">{data.school}</p>}
+                      {data.gradYear && <p className="text-slate-500 dark:text-slate-400">{t("common.classOf", { year: data.gradYear })}</p>}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {links.length > 0 && (
+                <div className="mt-5 border-t border-slate-100 pt-5 dark:border-slate-800">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">{t("portfolio.links")}</p>
+                  <ul className="mt-2 space-y-1">
+                    {links.map(({ href, label, icon: Icon }) => (
+                      <li key={label}>
+                        <a
+                          href={href}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="group flex items-center gap-3 rounded-lg px-2 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 hover:text-blue-600 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-blue-400"
+                        >
+                          <Icon className="h-4 w-4 shrink-0" />
+                          <span className="flex-1">{label}</span>
+                          <ExternalLinkIcon className="h-3.5 w-3.5 opacity-0 transition group-hover:opacity-100" />
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              <div className="mt-6 grid gap-2">
+                {data.resumeUrl && (
+                  <a href={data.resumeUrl} target="_blank" rel="noreferrer" className={`${buttonClass("primary")} w-full justify-center`}>
+                    <FileTextIcon className="h-4 w-4" /> {t("portfolio.resume")}
+                  </a>
+                )}
+                <Button variant="secondary" onClick={copyLink} className="w-full justify-center">
+                  <CopyIcon className="h-4 w-4" /> {t("portfolio.share")}
+                </Button>
+              </div>
+            </Card>
+          </aside>
+
+          <main className="min-w-0 space-y-6 lg:pt-8">
+            <div className="grid grid-cols-3 gap-3 sm:gap-4">
+              {stats.map(({ label, value, icon: Icon }) => (
+                <Card key={label} className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-sm">
+                    <Icon className="h-5 w-5" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-2xl font-semibold tabular-nums text-slate-900 dark:text-white">{value}</p>
+                    <p className="truncate text-xs text-slate-500 dark:text-slate-400">{label}</p>
                   </div>
                 </Card>
               ))}
             </div>
-          )}
-        </Section>
 
-        {data.certifications.length > 0 && (
-          <Section title={t("portfolio.certifications")}>
-            <div className="grid gap-3 sm:grid-cols-2">
-              {data.certifications.map((c) => (
-                <div
-                  key={c.id}
-                  className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900"
-                >
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400">
-                    <AwardIcon className="h-5 w-5" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold text-slate-900 dark:text-white">{c.name}</p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
-                      {[c.provider, c.examDate && new Date(c.examDate).getFullYear()].filter(Boolean).join(" · ")}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </Section>
-        )}
-
-        <Section title={t("portfolio.comments", { count: comments.length })}>
-          {user?.role === "EMPLOYER" ? null : user ? (
-            <form onSubmit={handleCommentSubmit} className="flex gap-3">
-              <Avatar name={user.name} size="sm" />
-              <div className="flex-1 space-y-2">
-                <textarea
-                  rows={3}
-                  placeholder={isOwner ? t("portfolio.notePlaceholder") : t("portfolio.commentPlaceholder", { name: data.name.split(" ")[0] ?? "" })}
-                  value={commentText}
-                  onChange={(e) => setCommentText(e.target.value)}
-                  className={inputClass}
-                />
-                {commentError && <p className="text-sm text-red-600 dark:text-red-400">{commentError}</p>}
-                <div className="flex justify-end">
-                  <Button type="submit" size="sm" disabled={posting || commentText.trim().length === 0}>
-                    {posting ? t("portfolio.posting") : t("portfolio.post")}
-                  </Button>
-                </div>
-              </div>
-            </form>
-          ) : (
-            <div className="rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
-              {formatNodes(t("portfolio.loginToComment"), {
-                login: (
-                  <Link to="/login" className="font-medium text-blue-600 hover:underline dark:text-blue-400">
-                    {t("common.logIn")}
-                  </Link>
-                ),
-                register: (
-                  <Link to="/register" className="font-medium text-blue-600 hover:underline dark:text-blue-400">
-                    {t("portfolio.createAccount")}
-                  </Link>
-                ),
-              })}
-            </div>
-          )}
-
-          <div className="mt-6 space-y-4">
-            {comments.length === 0 && (
-              <p className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
-                <MessageSquareIcon className="h-4 w-4" /> {t("portfolio.noComments")}
-              </p>
+            {data.bio && (
+              <Section title={t("portfolio.about")}>
+                <p className="whitespace-pre-line text-base leading-relaxed text-slate-700 dark:text-slate-300">{data.bio}</p>
+              </Section>
             )}
 
-            {comments.map((comment) => (
-              <div key={comment.id} className="flex gap-3">
-                <Avatar name={comment.authorName} size="sm" />
-                <div className="min-w-0 flex-1 rounded-xl rounded-tl-sm bg-white p-4 ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-semibold text-slate-900 dark:text-white">{comment.authorName}</p>
-                      <p className="text-xs text-slate-400 dark:text-slate-500">{formatDate(comment.createdAt)}</p>
-                    </div>
-                    {user && (user.id === comment.authorId || isOwner) && (
-                      <button
-                        onClick={() => void handleCommentDelete(comment.id)}
-                        aria-label={t("portfolio.deleteComment")}
-                        className="rounded p-1 text-slate-400 hover:text-red-600 dark:hover:text-red-400"
-                      >
-                        <TrashIcon className="h-4 w-4" />
-                      </button>
-                    )}
-                  </div>
-                  <p className="mt-2 whitespace-pre-line text-sm text-slate-700 dark:text-slate-300">{comment.body}</p>
+            {data.skills.length > 0 && (
+              <Section title={t("portfolio.skills")}>
+                <div className="flex flex-wrap gap-2">
+                  {data.skills.map((skill) => (
+                    <span
+                      key={skill}
+                      className="rounded-full bg-gradient-to-r from-blue-50 to-indigo-50 px-3.5 py-1.5 text-sm font-medium text-blue-700 ring-1 ring-blue-100 dark:from-blue-500/10 dark:to-indigo-500/10 dark:text-blue-300 dark:ring-blue-500/20"
+                    >
+                      {skill}
+                    </span>
+                  ))}
                 </div>
+              </Section>
+            )}
+
+            <Section title={t("portfolio.projects", { count: data.projects.length })}>
+              {data.projects.length === 0 ? (
+                <p className="text-slate-500 dark:text-slate-400">{t("portfolio.noProjects")}</p>
+              ) : (
+                <div className="grid gap-5 sm:grid-cols-2">
+                  {data.projects.map((project, index) => (
+                    <article
+                      key={project.id}
+                      className="group flex flex-col overflow-hidden rounded-xl border border-slate-200 bg-white transition hover:-translate-y-0.5 hover:shadow-lg dark:border-slate-800 dark:bg-slate-950"
+                    >
+                      {project.imageUrl ? (
+                        <img src={project.imageUrl} alt="" className="aspect-[16/9] w-full object-cover" loading="lazy" />
+                      ) : (
+                        <div className={`flex aspect-[16/9] items-center justify-center bg-gradient-to-br ${coverFor(index)}`}>
+                          <span className="text-4xl font-bold text-white/90 drop-shadow">{project.title.trim().slice(0, 1).toUpperCase()}</span>
+                        </div>
+                      )}
+                      <div className="flex flex-1 flex-col p-5">
+                        <h3 className="font-semibold text-slate-900 group-hover:text-blue-600 dark:text-white dark:group-hover:text-blue-400">
+                          {project.title}
+                        </h3>
+                        {project.description && (
+                          <p className="mt-1.5 line-clamp-4 text-sm leading-relaxed text-slate-600 dark:text-slate-400">{project.description}</p>
+                        )}
+                        {project.techStack.length > 0 && (
+                          <div className="mt-3 flex flex-wrap gap-1.5">
+                            {project.techStack.map((tech) => (
+                              <Badge key={tech} tone="blue">
+                                {tech}
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
+                        {(project.projectUrl || project.githubUrl) && (
+                          <div className="mt-auto flex flex-wrap gap-2 pt-4">
+                            {project.projectUrl && (
+                              <a href={project.projectUrl} target="_blank" rel="noreferrer" className={buttonClass("primary", "sm")}>
+                                <ExternalLinkIcon className="h-4 w-4" /> {t("portfolio.liveDemo")}
+                              </a>
+                            )}
+                            {project.githubUrl && (
+                              <a href={project.githubUrl} target="_blank" rel="noreferrer" className={buttonClass("secondary", "sm")}>
+                                <GithubIcon className="h-4 w-4" /> {t("portfolio.sourceCode")}
+                              </a>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              )}
+            </Section>
+
+            {data.certifications.length > 0 && (
+              <Section title={t("portfolio.certifications")}>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {data.certifications.map((c) => (
+                    <div key={c.id} className="flex items-center gap-3 rounded-xl bg-slate-50 p-4 dark:bg-slate-800/50">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-100 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-400">
+                        <AwardIcon className="h-5 w-5" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-slate-900 dark:text-white">{c.name}</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                          {[c.provider, c.examDate && new Date(c.examDate).getFullYear()].filter(Boolean).join(" · ")}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </Section>
+            )}
+
+            <Section title={t("portfolio.comments", { count: comments.length })}>
+              {user?.role === "EMPLOYER" ? null : user ? (
+                <form onSubmit={handleCommentSubmit} className="flex gap-3">
+                  <Avatar name={user.name} size="sm" />
+                  <div className="flex-1 space-y-2">
+                    <textarea
+                      rows={3}
+                      placeholder={isOwner ? t("portfolio.notePlaceholder") : t("portfolio.commentPlaceholder", { name: data.name.split(" ")[0] ?? "" })}
+                      value={commentText}
+                      onChange={(e) => setCommentText(e.target.value)}
+                      className={inputClass}
+                    />
+                    {commentError && <p className="text-sm text-red-600 dark:text-red-400">{commentError}</p>}
+                    <div className="flex justify-end">
+                      <Button type="submit" size="sm" disabled={posting || commentText.trim().length === 0}>
+                        {posting ? t("portfolio.posting") : t("portfolio.post")}
+                      </Button>
+                    </div>
+                  </div>
+                </form>
+              ) : (
+                <div className="rounded-xl bg-slate-50 p-4 text-sm text-slate-600 dark:bg-slate-800/50 dark:text-slate-400">
+                  {formatNodes(t("portfolio.loginToComment"), {
+                    login: (
+                      <Link to="/login" className="font-medium text-blue-600 hover:underline dark:text-blue-400">
+                        {t("common.logIn")}
+                      </Link>
+                    ),
+                    register: (
+                      <Link to="/register" className="font-medium text-blue-600 hover:underline dark:text-blue-400">
+                        {t("portfolio.createAccount")}
+                      </Link>
+                    ),
+                  })}
+                </div>
+              )}
+
+              <div className="mt-6 space-y-4">
+                {comments.length === 0 && (
+                  <p className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
+                    <MessageSquareIcon className="h-4 w-4" /> {t("portfolio.noComments")}
+                  </p>
+                )}
+
+                {comments.map((comment) => (
+                  <div key={comment.id} className="flex gap-3">
+                    <Avatar name={comment.authorName} size="sm" />
+                    <div className="min-w-0 flex-1 rounded-xl rounded-tl-sm bg-slate-50 p-4 dark:bg-slate-800/50">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-semibold text-slate-900 dark:text-white">{comment.authorName}</p>
+                          <p className="text-xs text-slate-400 dark:text-slate-500">{formatDate(comment.createdAt)}</p>
+                        </div>
+                        {user && (user.id === comment.authorId || isOwner) && (
+                          <button
+                            onClick={() => void handleCommentDelete(comment.id)}
+                            aria-label={t("portfolio.deleteComment")}
+                            className="rounded p-1 text-slate-400 hover:text-red-600 dark:hover:text-red-400"
+                          >
+                            <TrashIcon className="h-4 w-4" />
+                          </button>
+                        )}
+                      </div>
+                      <p className="mt-2 whitespace-pre-line text-sm text-slate-700 dark:text-slate-300">{comment.body}</p>
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-        </Section>
-      </main>
+            </Section>
+          </main>
+        </div>
+      </div>
 
       <Footer />
     </div>

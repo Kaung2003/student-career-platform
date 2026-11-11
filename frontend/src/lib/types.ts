@@ -115,6 +115,8 @@ export interface PublicPortfolio {
   linkedin: string | null;
   website: string | null;
   resumeUrl: string | null;
+  /** The student turned on "Show me to companies". */
+  openToWork: boolean;
   certifications: { id: string; name: string; provider: string | null; examDate: string | null }[];
   projects: Project[];
 }

@@ -832,4 +832,11 @@ export const de: Record<MessageKey, string> = {
   "admin.questions.englishOnly": "Nur Englisch",
   "admin.questions.writeInEnglish": "Schreibe die Frage auf Englisch. Die mitgelieferten Fragen sind in alle Sprachen übersetzt; Fragen, die du hinzufügst oder umformulierst, werden allen auf Englisch angezeigt.",
   "admin.companies.testTip": "Um den Unternehmensbereich selbst zu testen, registriere ein Unternehmen mit einer „+“-Variante deiner Admin-E-Mail, zum Beispiel {example}. Die E-Mail landet in deinem normalen Posteingang. Gib das Unternehmen danach hier frei.",
+  "portfolio.openToWork": "Offen für Angebote",
+  "portfolio.education": "Ausbildung",
+  "portfolio.links": "Links",
+  "portfolio.website": "Website",
+  "portfolio.statProjects": "Projekte",
+  "portfolio.statSkills": "Fähigkeiten",
+  "portfolio.statCertifications": "Zertifikate",
 };

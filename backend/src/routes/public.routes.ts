@@ -121,6 +121,7 @@ publicRouter.get("/:slug", optionalAuth, async (req, res) => {
     linkedin: profile.linkedin,
     website: profile.website,
     resumeUrl: profile.resumeUrl,
+    openToWork: profile.companyVisibleSince !== null,
     certifications: profile.user.certifications,
     projects: profile.projects,
   });

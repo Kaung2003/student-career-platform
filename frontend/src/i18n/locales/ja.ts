@@ -819,4 +819,11 @@ export const ja: Record<MessageKey, string> = {
   "admin.questions.englishOnly": "英語のみ",
   "admin.questions.writeInEnglish": "質問は英語で入力してください。標準の質問はすべての言語に翻訳されていますが、追加・変更した質問はすべての言語で英語のまま表示されます。",
   "admin.companies.testTip": "企業パネルを自分で試すには、管理者メールに「+」を付けたアドレス（例：{example}）で企業登録してください。メールは普段の受信箱に届きます。その後、ここで承認してください。",
+  "portfolio.openToWork": "企業からの連絡を歓迎",
+  "portfolio.education": "学歴",
+  "portfolio.links": "リンク",
+  "portfolio.website": "ウェブサイト",
+  "portfolio.statProjects": "プロジェクト",
+  "portfolio.statSkills": "スキル",
+  "portfolio.statCertifications": "資格",
 };

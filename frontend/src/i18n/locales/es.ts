@@ -832,4 +832,11 @@ export const es: Record<MessageKey, string> = {
   "admin.questions.englishOnly": "Solo en inglés",
   "admin.questions.writeInEnglish": "Escribe la pregunta en inglés. Las preguntas incluidas están traducidas a todos los idiomas; las que añadas o modifiques se mostrarán en inglés a todos.",
   "admin.companies.testTip": "Para probar tú mismo el panel de empresa, regístrate como empresa con una versión «+» de tu correo de administrador, por ejemplo {example}. Llega a tu bandeja de entrada habitual. Después apruébala aquí.",
+  "portfolio.openToWork": "Abierto a oportunidades",
+  "portfolio.education": "Formación",
+  "portfolio.links": "Enlaces",
+  "portfolio.website": "Sitio web",
+  "portfolio.statProjects": "Proyectos",
+  "portfolio.statSkills": "Habilidades",
+  "portfolio.statCertifications": "Certificaciones",
 };
