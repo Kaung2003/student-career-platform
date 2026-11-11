@@ -831,6 +831,7 @@ export const en = {
   "terms.companies": "Company accounts must represent a real organization and use a work email. Student information may only be used for genuine recruiting. We may refuse, remove or suspend a company that misuses it.",
   "admin.questions.englishOnly": "English only",
   "admin.questions.writeInEnglish": "Write the question in English. The built-in questions have translations for every language; a question you add or reword is shown in English to everyone.",
+  "admin.companies.testTip": "To try the company panel yourself, sign up at Company sign-up with a \"+\" version of your admin email, such as {example}. It arrives in your normal inbox. Then approve it here.",
 } as const;
 
 export type MessageKey = keyof typeof en;

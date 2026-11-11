@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useAuth } from "../../context/AuthContext";
 import { useUi } from "../../context/UiContext";
 import { useI18n } from "../../i18n/I18nContext";
 import { api, ApiError } from "../../lib/api";
@@ -19,6 +20,9 @@ const FILTERS: CompanyStatus[] = ["PENDING", "APPROVED", "REJECTED"];
 export function AdminCompanies() {
   const { toast } = useUi();
   const { t, locale } = useI18n();
+  const { user } = useAuth();
+  // "ada@gmail.com" -> "ada+company@gmail.com", which the server accepts for admins only.
+  const testAddress = user ? user.email.replace("@", "+company@") : "you+company@gmail.com";
   const [status, setStatus] = useState<CompanyStatus>("PENDING");
   const [companies, setCompanies] = useState<AdminCompany[]>([]);
   const [loading, setLoading] = useState(true);
@@ -53,6 +57,9 @@ export function AdminCompanies() {
   return (
     <div>
       <PageHeader title={t("admin.companies.title")} description={t("admin.companies.description")} />
+      <p className="mb-6 rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-600 dark:bg-slate-900 dark:text-slate-400">
+        {t("admin.companies.testTip", { example: testAddress })}
+      </p>
 
       <div className="scroll-row mb-5 flex gap-2">
         {FILTERS.map((f) => (

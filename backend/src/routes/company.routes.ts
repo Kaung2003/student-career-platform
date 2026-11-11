@@ -6,7 +6,7 @@ import { prisma } from "../lib/prisma.js";
 import { HttpError, parse } from "../lib/http.js";
 import { companySearchLimiter, signupLimiter } from "../lib/rate-limit.js";
 import { email, optionalText, password, personName } from "../lib/schemas.js";
-import { isFreeEmail } from "../lib/company.js";
+import { isFreeEmail, withoutPlusTag } from "../lib/company.js";
 import { searchStudents } from "../lib/student-search.js";
 import { SALT_ROUNDS, sendVerificationEmail } from "./auth.routes.js";
 
@@ -30,11 +30,19 @@ const website = z
 
 const registerSchema = z.strictObject({ name: personName, email, password, companyName, website });
 
+/** True for "+" versions of an admin's own address, so admins can test the company panel. */
+async function isAdminTestAddress(address: string) {
+  const base = withoutPlusTag(address);
+  if (!base) return false;
+  const admin = await prisma.user.findFirst({ where: { role: "ADMIN", email: { equals: base, mode: "insensitive" } } });
+  return Boolean(admin);
+}
+
 /** Company sign-up: confirms the email like any account, then waits for an admin to approve the company. */
 companyRouter.post("/register", signupLimiter, async (req, res) => {
   const body = parse(registerSchema, req.body);
 
-  if (isFreeEmail(body.email)) {
+  if (isFreeEmail(body.email) && !(await isAdminTestAddress(body.email))) {
     throw new HttpError(400, "Please use your company email address, not a free address like Gmail.", "WORK_EMAIL_REQUIRED");
   }
   const existing = await prisma.user.findFirst({ where: { email: { equals: body.email, mode: "insensitive" } } });

@@ -22,3 +22,14 @@ export function emailMatchesWebsite(email: string, website: string): boolean {
   const domain = emailDomain(email);
   return domain === host || domain.endsWith(`.${host}`) || host.endsWith(`.${domain}`);
 }
+
+/**
+ * "ada+company@gmail.com" -> "ada@gmail.com". Gmail and most providers deliver "+" addresses to the
+ * same inbox, which lets an admin open a test company account without owning a company domain.
+ */
+export function withoutPlusTag(email: string): string | null {
+  const at = email.lastIndexOf("@");
+  const local = email.slice(0, at);
+  const plus = local.indexOf("+");
+  return plus > 0 ? `${local.slice(0, plus)}${email.slice(at)}`.toLowerCase() : null;
+}

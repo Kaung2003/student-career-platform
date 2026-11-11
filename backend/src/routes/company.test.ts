@@ -37,6 +37,21 @@ beforeEach(async () => {
 });
 
 describe("company sign-up", () => {
+  it("lets an admin test with a \"+\" version of their own free address, and nobody else", async () => {
+    const { user: admin } = await signUp({ email: "boss@gmail.com", role: "ADMIN" });
+    expect(admin.email).toBe("boss@gmail.com");
+    const { user: student } = await signUp({ email: "kid@gmail.com" });
+
+    const ok = await request(app).post("/api/company/register").send({ ...details, email: "boss+company@gmail.com" });
+    expect(ok.status).toBe(201);
+    expect((await prisma.company.findFirstOrThrow()).status).toBe("PENDING");
+
+    for (const email of [`${student.email.split("@")[0]}+co@gmail.com`, "stranger+co@gmail.com", "boss+x@yahoo.com"]) {
+      const res = await request(app).post("/api/company/register").send({ ...details, email });
+      expect(res.body.code, email).toBe("WORK_EMAIL_REQUIRED");
+    }
+  });
+
   it("creates a pending employer account with no student portfolio", async () => {
     const agent = await registerCompany();
 
