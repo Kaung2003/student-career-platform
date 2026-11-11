@@ -55,6 +55,13 @@ describe("student visibility", () => {
     expect(again.body.profile.companyVisibleSince).toBe(first);
   });
 
+  it("includes admins who opted in, since admins here are students too", async () => {
+    const company = await approvedCompanyAgent();
+    const { agent } = await signUp({ name: "Admin Student", role: "ADMIN" });
+    await agent.put("/api/profile/me/visibility").send({ visible: true }).expect(200);
+    expect(names(await company.get("/api/company/students"))).toEqual(["Admin Student"]);
+  });
+
   it("leaves out suspended students", async () => {
     const company = await approvedCompanyAgent();
     const { user } = await student("Ada", {});

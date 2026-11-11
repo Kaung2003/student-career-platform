@@ -792,7 +792,7 @@ export const my: Record<MessageKey, string> = {
   "company.projectCount": "ပရောဂျက်- {count}",
   "company.viewPortfolio": "ပို့ဖိုလီယို ကြည့်ရန်",
   "company.noStudentsTitle": "ကျောင်းသား မတွေ့ပါ",
-  "company.noStudentsFiltered": "စစ်ထုတ်မှု လျှော့ပါ သို့မဟုတ် အခြားစကားလုံးဖြင့် စမ်းကြည့်ပါ။",
+  "company.noStudentsFiltered": "\"ကုမ္ပဏီများကို ကျွန်ုပ်အား ပြပါ\" ကို ဖွင့်ထားသော ကျောင်းသားများသာ ဤနေရာတွင် ပေါ်ပါသည်။ စစ်ထုတ်မှု လျှော့ပါ သို့မဟုတ် အခြားစကားလုံးဖြင့် စမ်းကြည့်ပါ။",
   "company.noStudentsYet": "ကုမ္ပဏီများကို ပြသရန် ရွေးချယ်ထားသော ကျောင်းသား မရှိသေးပါ။",
   "company.notApprovedTitle": "သင့်ကုမ္ပဏီ အတည်မပြုရသေးပါ",
   "company.notApprovedMessage": "စီမံသူက သင့်ကုမ္ပဏီကို အတည်ပြုပြီးနောက် ကျောင်းသားများကို ရှာနိုင်ပါမည်။",

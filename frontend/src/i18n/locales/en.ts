@@ -804,7 +804,7 @@ export const en = {
   "company.projectCount": "Projects: {count}",
   "company.viewPortfolio": "View portfolio",
   "company.noStudentsTitle": "No students found",
-  "company.noStudentsFiltered": "Try fewer filters or a different word.",
+  "company.noStudentsFiltered": "Only students who turned on \"Show me to companies\" appear here. Try fewer filters or a different word.",
   "company.noStudentsYet": "No students have chosen to be visible yet.",
   "company.notApprovedTitle": "Your company isn't approved yet",
   "company.notApprovedMessage": "You can search for students once an admin has approved your company.",

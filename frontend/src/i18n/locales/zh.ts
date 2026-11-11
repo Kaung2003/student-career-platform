@@ -791,7 +791,7 @@ export const zh: Record<MessageKey, string> = {
   "company.projectCount": "项目数：{count}",
   "company.viewPortfolio": "查看作品集",
   "company.noStudentsTitle": "未找到学生",
-  "company.noStudentsFiltered": "请减少筛选条件或换一个词。",
+  "company.noStudentsFiltered": "这里只显示开启了“向企业展示我”的学生。请减少筛选条件或换一个词。",
   "company.noStudentsYet": "还没有学生选择公开。",
   "company.notApprovedTitle": "你的企业尚未获批",
   "company.notApprovedMessage": "管理员批准你的企业后，即可搜索学生。",

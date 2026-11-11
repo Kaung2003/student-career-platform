@@ -791,7 +791,7 @@ export const ja: Record<MessageKey, string> = {
   "company.projectCount": "プロジェクト数：{count}",
   "company.viewPortfolio": "ポートフォリオを見る",
   "company.noStudentsTitle": "学生が見つかりません",
-  "company.noStudentsFiltered": "条件を減らすか、別の言葉でお試しください。",
+  "company.noStudentsFiltered": "ここに表示されるのは「企業に公開する」をオンにした学生だけです。条件を減らすか、別の言葉でお試しください。",
   "company.noStudentsYet": "企業への公開を選んだ学生はまだいません。",
   "company.notApprovedTitle": "企業はまだ承認されていません",
   "company.notApprovedMessage": "管理者が企業を承認すると、学生を検索できるようになります。",

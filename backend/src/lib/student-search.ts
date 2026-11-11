@@ -18,7 +18,8 @@ export async function searchStudents({ q, school, skills, gradYear, page }: Stud
   const conditions = [
     Prisma.sql`p."companyVisibleSince" IS NOT NULL`,
     Prisma.sql`u."suspended" = false`,
-    Prisma.sql`u."role" = 'STUDENT'`,
+    // Admins are students running the site, so they're included when they opt in.
+    Prisma.sql`u."role" <> 'EMPLOYER'`,
   ];
 
   // Every word has to match somewhere: "React 東京" finds a React student at a Tokyo school.

@@ -804,7 +804,7 @@ export const de: Record<MessageKey, string> = {
   "company.projectCount": "Projekte: {count}",
   "company.viewPortfolio": "Portfolio ansehen",
   "company.noStudentsTitle": "Keine Studierenden gefunden",
-  "company.noStudentsFiltered": "Versuche es mit weniger Filtern oder einem anderen Wort.",
+  "company.noStudentsFiltered": "Hier erscheinen nur Studierende, die „Für Unternehmen sichtbar sein“ eingeschaltet haben. Versuche es mit weniger Filtern oder einem anderen Wort.",
   "company.noStudentsYet": "Noch hat sich niemand für Unternehmen sichtbar gemacht.",
   "company.notApprovedTitle": "Dein Unternehmen ist noch nicht freigegeben",
   "company.notApprovedMessage": "Du kannst Studierende suchen, sobald ein Admin dein Unternehmen freigegeben hat.",
