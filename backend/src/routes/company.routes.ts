@@ -28,7 +28,15 @@ const website = z
     }
   }, "must be a valid website address");
 
-const registerSchema = z.strictObject({ name: personName, email, password, companyName, website });
+const registerSchema = z.strictObject({
+  name: personName,
+  email,
+  password,
+  companyName,
+  website,
+  // The company must agree to use student information only for recruiting.
+  acceptTerms: z.literal(true, { error: "Please agree to the terms for companies" }),
+});
 
 /** True for "+" versions of an admin's own address, so admins can test the company panel. */
 async function isAdminTestAddress(address: string) {
@@ -56,7 +64,7 @@ companyRouter.post("/register", signupLimiter, async (req, res) => {
       email: body.email,
       password: await bcrypt.hash(body.password, SALT_ROUNDS),
       role: "EMPLOYER",
-      company: { create: { name: body.companyName, website: body.website } },
+      company: { create: { name: body.companyName, website: body.website, termsAcceptedAt: new Date() } },
     },
   });
   await sendVerificationEmail(user);

@@ -1,5 +1,6 @@
 import { useState, type SubmitEvent } from "react";
 import { Link } from "react-router-dom";
+import { formatNodes } from "../../i18n/formatNodes";
 import { useAuth } from "../../context/AuthContext";
 import { useI18n } from "../../i18n/I18nContext";
 import { ApiError } from "../../lib/api";
@@ -16,6 +17,7 @@ export function CompanyRegister() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [acceptTerms, setAcceptTerms] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [sentTo, setSentTo] = useState<string | null>(null);
@@ -25,7 +27,7 @@ export function CompanyRegister() {
     setError(null);
     setSubmitting(true);
     try {
-      setSentTo(await registerCompany({ companyName, website, name, email, password }));
+      setSentTo(await registerCompany({ companyName, website, name, email, password, acceptTerms }));
     } catch (err) {
       if (err instanceof ApiError && err.code === "WORK_EMAIL_REQUIRED") setError(t("company.workEmailRequired"));
       else setError(err instanceof ApiError ? err.message : t("auth.registerFailed"));
@@ -55,6 +57,24 @@ export function CompanyRegister() {
           <Field label={t("auth.password")}>
             <input type="password" required minLength={8} autoComplete="new-password" placeholder={t("auth.passwordPlaceholder")} value={password} onChange={(e) => setPassword(e.target.value)} className={inputClass} />
           </Field>
+
+          <label className="flex items-start gap-2.5 text-sm text-slate-600 dark:text-slate-400">
+            <input type="checkbox" required checked={acceptTerms} onChange={(e) => setAcceptTerms(e.target.checked)} className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300" />
+            <span>
+              {formatNodes(t("company.agreeTerms"), {
+                terms: (
+                  <Link to="/terms" target="_blank" className="font-medium text-blue-600 underline dark:text-blue-400">
+                    {t("legal.terms")}
+                  </Link>
+                ),
+                privacy: (
+                  <Link to="/privacy" target="_blank" className="font-medium text-blue-600 underline dark:text-blue-400">
+                    {t("legal.privacy")}
+                  </Link>
+                ),
+              })}
+            </span>
+          </label>
 
           {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
 

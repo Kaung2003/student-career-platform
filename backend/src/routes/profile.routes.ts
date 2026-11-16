@@ -83,6 +83,34 @@ profileRouter.put("/me/visibility", async (req, res) => {
 
 const DAY = 24 * 60 * 60 * 1000;
 
+/** Which companies looked at the student's portfolio in the last 90 days, newest first. */
+profileRouter.get("/me/company-views", async (req, res) => {
+  const profile = await prisma.studentProfile.findUnique({ where: { userId: req.auth!.userId } });
+  if (!profile) {
+    res.json({ companies: [] });
+    return;
+  }
+
+  const views = await prisma.companyActivity.groupBy({
+    by: ["companyId"],
+    where: { type: "VIEW", profileId: profile.id, createdAt: { gte: new Date(Date.now() - 90 * DAY) } },
+    _count: { _all: true },
+    _max: { createdAt: true },
+  });
+  const companies = await prisma.company.findMany({
+    where: { id: { in: views.map((v) => v.companyId) } },
+    select: { id: true, name: true, website: true },
+  });
+  const byId = new Map(companies.map((c) => [c.id, c]));
+
+  res.json({
+    companies: views
+      .filter((v) => byId.has(v.companyId))
+      .map((v) => ({ name: byId.get(v.companyId)!.name, website: byId.get(v.companyId)!.website, views: v._count._all, lastViewedAt: v._max.createdAt }))
+      .sort((a, b) => b.lastViewedAt!.getTime() - a.lastViewedAt!.getTime()),
+  });
+});
+
 /** Portfolio views for the owner's dashboard: totals plus a 14-day series. */
 profileRouter.get("/me/views", async (req, res) => {
   const profile = await prisma.studentProfile.findUnique({ where: { userId: req.auth!.userId } });

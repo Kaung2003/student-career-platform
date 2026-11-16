@@ -321,6 +321,8 @@ model Company {
   // Shown to the company when a review is rejected.
   reviewNote  String?
   reviewedAt  DateTime?
+  // When the company agreed to use student data only for recruiting (個人情報保護法).
+  termsAcceptedAt DateTime?
 
   user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId      String        @unique

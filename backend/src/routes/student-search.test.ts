@@ -13,7 +13,7 @@ async function approvedCompanyAgent(status: "APPROVED" | "PENDING" = "APPROVED")
   const password = "long-enough-pw";
   await request(app)
     .post("/api/company/register")
-    .send({ name: "Hana", email, password, companyName: "Acme", website: "acme.example" })
+    .send({ name: "Hana", email, password, companyName: "Acme", website: "acme.example", acceptTerms: true })
     .expect(201);
   const user = await prisma.user.update({ where: { email }, data: { emailVerified: new Date() } });
   await prisma.company.update({ where: { userId: user.id }, data: { status } });
@@ -181,5 +181,23 @@ describe("usage numbers", () => {
     const stats = await admin.get("/api/admin/stats");
     expect(stats.body.outcomes).toMatchObject({ visibleStudents: 1, approvedCompanies: 1, companySearches: 1, companyViews: 1 });
     expect(JSON.stringify(await prisma.companyActivity.findMany())).not.toContain("private search words");
+  });
+});
+
+describe("company views for the student", () => {
+  it("shows a student which companies viewed their portfolio, and only their own", async () => {
+    const company = await approvedCompanyAgent();
+    const ada = await student("Ada", { headline: "Engineer" });
+    const bob = await student("Bob", { headline: "Designer" });
+
+    await company.get(`/api/public/${ada.slug}`).expect(200);
+    await company.get(`/api/public/${ada.slug}`).expect(200);
+    await vi.waitFor(async () => expect(await prisma.companyActivity.count({ where: { type: "VIEW" } })).toBe(2));
+
+    const mine = await ada.agent.get("/api/profile/me/company-views").expect(200);
+    expect(mine.body.companies).toEqual([
+      expect.objectContaining({ name: "Acme", website: "https://acme.example", views: 2 }),
+    ]);
+    expect((await bob.agent.get("/api/profile/me/company-views")).body.companies).toEqual([]);
   });
 });

@@ -211,3 +211,11 @@ export interface AdminComment {
   profileSlug: string;
   profileName: string;
 }
+
+/** An approved company that opened the student's portfolio. */
+export interface CompanyView {
+  name: string;
+  website: string;
+  views: number;
+  lastViewedAt: string;
+}

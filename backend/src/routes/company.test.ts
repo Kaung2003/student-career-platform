@@ -18,6 +18,7 @@ const details = {
   password: "long-enough-pw",
   companyName: "Acme",
   website: "acme.example",
+  acceptTerms: true,
 };
 
 /** Registers a company, confirms its email through the link, and returns a logged-in agent. */
@@ -37,6 +38,16 @@ beforeEach(async () => {
 });
 
 describe("company sign-up", () => {
+  it("requires agreeing to the terms for companies, and records when", async () => {
+    const { acceptTerms: _, ...withoutTerms } = details;
+    expect((await request(app).post("/api/company/register").send(withoutTerms)).status).toBe(400);
+    expect((await request(app).post("/api/company/register").send({ ...details, acceptTerms: false })).status).toBe(400);
+
+    await registerCompany();
+    const company = await prisma.company.findFirstOrThrow();
+    expect(company.termsAcceptedAt).toBeInstanceOf(Date);
+  });
+
   it("lets an admin test with a \"+\" version of their own free address, and nobody else", async () => {
     const { user: admin } = await signUp({ email: "boss@gmail.com", role: "ADMIN" });
     expect(admin.email).toBe("boss@gmail.com");
