@@ -139,6 +139,15 @@ export function AdminOverview() {
         </Link>
       )}
 
+      {stats.companyAlerts.length > 0 && (
+        <Link
+          to="/admin/companies"
+          className="mb-6 block rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700 hover:underline dark:bg-red-500/10 dark:text-red-300"
+        >
+          {t("admin.overview.companyAlert", { names: stats.companyAlerts.map((c) => `${c.name} (${c.views})`).join(", ") })}
+        </Link>
+      )}
+
       {totals.failedEmails > 0 && (
         <p className="mb-6 rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700 dark:bg-red-500/10 dark:text-red-300">
           {t("admin.overview.failedEmails", { count: totals.failedEmails })}

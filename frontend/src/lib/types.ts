@@ -20,14 +20,22 @@ export interface Company {
   description: string | null;
   status: CompanyStatus;
   reviewNote: string | null;
+  corporateNumber: string | null;
+  checks: CompanyCheck[];
   createdAt: string;
 }
+
+/** What an admin checks before approving a company. REGISTRY and INSURANCE are required. */
+export const COMPANY_CHECKS = ["REGISTRY", "INSURANCE", "ACTIVITY", "ADDRESS", "PHONE"] as const;
+export type CompanyCheck = (typeof COMPANY_CHECKS)[number];
+export const REQUIRED_CHECKS: CompanyCheck[] = ["REGISTRY", "INSURANCE"];
 
 export interface AdminCompany extends Company {
   contactName: string;
   contactEmail: string;
   emailConfirmed: boolean;
   emailMatchesWebsite: boolean;
+  viewsLast24h: number;
 }
 
 export interface Project {
@@ -141,6 +149,7 @@ export interface ProfileComment {
 export type FeedbackStatus = "NEW" | "IN_PROGRESS" | "RESOLVED";
 
 export interface AdminStats {
+  companyAlerts: { id: string; name: string; views: number }[];
   totals: {
     pendingCompanies: number;
     failedEmails: number;

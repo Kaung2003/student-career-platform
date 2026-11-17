@@ -18,8 +18,15 @@ const details = {
   password: "long-enough-pw",
   companyName: "Acme",
   website: "acme.example",
+  corporateNumber: "7000012050002",
   acceptTerms: true,
 };
+
+/** Ticks the checks an admin must do, then approves. */
+async function approve(admin: ReturnType<typeof request.agent>, id: string) {
+  await admin.put(`/api/admin/companies/${id}/checks`).send({ checks: ["REGISTRY", "INSURANCE"] }).expect(200);
+  await admin.post(`/api/admin/companies/${id}/review`).send({ status: "APPROVED" }).expect(200);
+}
 
 /** Registers a company, confirms its email through the link, and returns a logged-in agent. */
 async function registerCompany(overrides: Partial<typeof details> = {}) {
@@ -112,6 +119,23 @@ describe("separate panels", () => {
   });
 });
 
+describe("corporate number (法人番号)", () => {
+  it("must be a real 13-digit number, written any common way", async () => {
+    for (const corporateNumber of ["", "123", "7000012050003", "abcdefghijklm"]) {
+      expect((await request(app).post("/api/company/register").send({ ...details, corporateNumber })).status, corporateNumber).toBe(400);
+    }
+    await registerCompany({ corporateNumber: "７０００-０１２０-５０００２" });
+    expect((await prisma.company.findFirstOrThrow()).corporateNumber).toBe("7000012050002");
+  });
+
+  it("can belong to only one account", async () => {
+    await registerCompany();
+    const again = await request(app).post("/api/company/register").send({ ...details, email: "someone@acme.example" });
+    expect(again.status).toBe(409);
+    expect(again.body.code).toBe("CORPORATE_NUMBER_TAKEN");
+  });
+});
+
 describe("admin review", () => {
   it("lists companies, flags a matching email, approves, and tells the company", async () => {
     const company = await registerCompany();
@@ -123,7 +147,7 @@ describe("admin review", () => {
     expect((await admin.get("/api/admin/stats")).body.totals.pendingCompanies).toBe(1);
 
     const id = list.body.companies[0].id;
-    await admin.post(`/api/admin/companies/${id}/review`).send({ status: "APPROVED" }).expect(200);
+    await approve(admin, id);
 
     expect((await company.get("/api/company/me")).body.company.status).toBe("APPROVED");
     await drainEmailQueue();
@@ -147,7 +171,7 @@ describe("admin review", () => {
     await admin.post(`/api/admin/companies/${id}/review`).send({ status: "REJECTED", note: "Website not found" }).expect(200);
     expect((await company.get("/api/company/me")).body.company).toMatchObject({ status: "REJECTED", reviewNote: "Website not found" });
 
-    const resubmit = await company.put("/api/company/me").send({ name: "Acme", website: "https://acme.example" });
+    const resubmit = await company.put("/api/company/me").send({ name: "Acme", website: "https://acme.example", corporateNumber: details.corporateNumber });
     expect(resubmit.body.company).toMatchObject({ status: "PENDING", reviewNote: null });
   });
 
@@ -155,13 +179,49 @@ describe("admin review", () => {
     const company = await registerCompany();
     const { agent: admin } = await signUp({ role: "ADMIN" });
     const { id } = await prisma.company.findFirstOrThrow();
-    await admin.post(`/api/admin/companies/${id}/review`).send({ status: "APPROVED" }).expect(200);
+    await approve(admin, id);
 
-    const about = await company.put("/api/company/me").send({ name: "Acme", website: "https://acme.example", description: "We make things" });
+    const about = await company.put("/api/company/me").send({ name: "Acme", website: "https://acme.example", corporateNumber: details.corporateNumber, description: "We make things" });
     expect(about.body.company).toMatchObject({ status: "APPROVED", description: "We make things" });
 
-    const renamed = await company.put("/api/company/me").send({ name: "Totally Different Inc", website: "https://acme.example" });
-    expect(renamed.body.company.status).toBe("PENDING");
+    const renamed = await company.put("/api/company/me").send({ name: "Totally Different Inc", website: "https://acme.example", corporateNumber: details.corporateNumber });
+    expect(renamed.body.company).toMatchObject({ status: "PENDING", checks: [] });
+  });
+
+  it("won't approve until the registration and social insurance are checked", async () => {
+    await registerCompany();
+    const { agent: admin } = await signUp({ role: "ADMIN" });
+    const { id } = await prisma.company.findFirstOrThrow();
+
+    const none = await admin.post(`/api/admin/companies/${id}/review`).send({ status: "APPROVED" });
+    expect(none.body.code).toBe("CHECKS_REQUIRED");
+    await admin.put(`/api/admin/companies/${id}/checks`).send({ checks: ["REGISTRY"] }).expect(200);
+    expect((await admin.post(`/api/admin/companies/${id}/review`).send({ status: "APPROVED" })).body.code).toBe("CHECKS_REQUIRED");
+    expect((await admin.put(`/api/admin/companies/${id}/checks`).send({ checks: ["MADE_UP"] })).status).toBe(400);
+
+    await approve(admin, id);
+    const log = await prisma.auditLog.findFirstOrThrow({ where: { action: "company.approved" } });
+    expect(JSON.stringify(log)).toContain("INSURANCE");
+  });
+
+  it("only lets the admin change the checklist", async () => {
+    const company = await registerCompany();
+    const { id } = await prisma.company.findFirstOrThrow();
+    expect((await company.put(`/api/admin/companies/${id}/checks`).send({ checks: ["REGISTRY", "INSURANCE"] })).status).toBe(403);
+  });
+
+  it("warns about a company that opens many portfolios in a day", async () => {
+    await registerCompany();
+    const { agent: admin } = await signUp({ role: "ADMIN" });
+    const company = await prisma.company.findFirstOrThrow();
+
+    await prisma.companyActivity.createMany({ data: Array.from({ length: 49 }, () => ({ type: "VIEW" as const, companyId: company.id })) });
+    expect((await admin.get("/api/admin/stats")).body.companyAlerts).toEqual([]);
+
+    await prisma.companyActivity.create({ data: { type: "VIEW", companyId: company.id } });
+    expect((await admin.get("/api/admin/stats")).body.companyAlerts).toEqual([{ id: company.id, name: "Acme", views: 50 }]);
+    const list = await admin.get("/api/admin/companies?status=PENDING");
+    expect(list.body.companies[0].viewsLast24h).toBe(50);
   });
 
   it("deletes the company along with the account", async () => {

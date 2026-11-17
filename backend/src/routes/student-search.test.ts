@@ -13,7 +13,8 @@ async function approvedCompanyAgent(status: "APPROVED" | "PENDING" = "APPROVED")
   const password = "long-enough-pw";
   await request(app)
     .post("/api/company/register")
-    .send({ name: "Hana", email, password, companyName: "Acme", website: "acme.example", acceptTerms: true })
+    .send({ name: "Hana", email, password, companyName: "Acme", website: "acme.example", acceptTerms: true,
+      corporateNumber: status === "APPROVED" ? "7000012050002" : "1180301018771" })
     .expect(201);
   const user = await prisma.user.update({ where: { email }, data: { emailVerified: new Date() } });
   await prisma.company.update({ where: { userId: user.id }, data: { status } });

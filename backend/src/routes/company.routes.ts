@@ -7,6 +7,7 @@ import { HttpError, parse } from "../lib/http.js";
 import { companySearchLimiter, signupLimiter } from "../lib/rate-limit.js";
 import { email, optionalText, password, personName } from "../lib/schemas.js";
 import { isFreeEmail, withoutPlusTag } from "../lib/company.js";
+import { isValidCorporateNumber, normalizeCorporateNumber } from "../lib/corporate-number.js";
 import { searchStudents } from "../lib/student-search.js";
 import { SALT_ROUNDS, sendVerificationEmail } from "./auth.routes.js";
 
@@ -28,12 +29,32 @@ const website = z
     }
   }, "must be a valid website address");
 
+/** 法人番号: 13 digits with a valid check digit. Hyphens, spaces and full-width digits are fine. */
+const corporateNumber = z
+  .string()
+  .transform((v, ctx) => {
+    const n = normalizeCorporateNumber(v);
+    if (!n || !isValidCorporateNumber(n)) {
+      ctx.addIssue({ code: "custom", message: "must be a valid 13-digit corporate number (法人番号)" });
+      return z.NEVER;
+    }
+    return n;
+  });
+
+async function assertCorporateNumberFree(number: string, exceptUserId?: string) {
+  const taken = await prisma.company.findUnique({ where: { corporateNumber: number }, select: { userId: true } });
+  if (taken && taken.userId !== exceptUserId) {
+    throw new HttpError(409, "A company with this corporate number (法人番号) is already registered.", "CORPORATE_NUMBER_TAKEN");
+  }
+}
+
 const registerSchema = z.strictObject({
   name: personName,
   email,
   password,
   companyName,
   website,
+  corporateNumber,
   // The company must agree to use student information only for recruiting.
   acceptTerms: z.literal(true, { error: "Please agree to the terms for companies" }),
 });
@@ -57,6 +78,7 @@ companyRouter.post("/register", signupLimiter, async (req, res) => {
   if (existing) {
     throw new HttpError(409, "An account with that email already exists. Log in instead.");
   }
+  await assertCorporateNumberFree(body.corporateNumber);
 
   const user = await prisma.user.create({
     data: {
@@ -64,7 +86,7 @@ companyRouter.post("/register", signupLimiter, async (req, res) => {
       email: body.email,
       password: await bcrypt.hash(body.password, SALT_ROUNDS),
       role: "EMPLOYER",
-      company: { create: { name: body.companyName, website: body.website, termsAcceptedAt: new Date() } },
+      company: { create: { name: body.companyName, website: body.website, corporateNumber: body.corporateNumber, termsAcceptedAt: new Date() } },
     },
   });
   await sendVerificationEmail(user);
@@ -82,6 +104,7 @@ companyRouter.get("/me", async (req, res) => {
 const profileSchema = z.object({
   name: companyName,
   website,
+  corporateNumber,
   industry: optionalText(80),
   location: optionalText(120),
   description: optionalText(2000),
@@ -92,14 +115,17 @@ companyRouter.put("/me", async (req, res) => {
   const body = parse(profileSchema, req.body);
   const userId = req.auth!.userId;
   const current = await prisma.company.findUnique({ where: { userId } });
+  await assertCorporateNumberFree(body.corporateNumber, userId);
 
-  const identityChanged = !current || current.name !== body.name || current.website !== body.website;
+  const identityChanged =
+    !current || current.name !== body.name || current.website !== body.website || current.corporateNumber !== body.corporateNumber;
   const backToReview = identityChanged || current.status === "REJECTED";
 
   const company = await prisma.company.upsert({
     where: { userId },
     create: { ...body, userId },
-    update: { ...body, ...(backToReview ? { status: "PENDING" as const, reviewNote: null, reviewedAt: null } : {}) },
+    // A new identity needs checking again from scratch.
+    update: { ...body, ...(backToReview ? { status: "PENDING" as const, reviewNote: null, reviewedAt: null, checks: [] } : {}) },
   });
   res.json({ company });
 });

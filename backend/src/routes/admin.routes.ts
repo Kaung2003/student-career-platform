@@ -5,6 +5,7 @@ import type { Prisma } from "../generated/prisma/client.js";
 import { audit } from "../lib/audit.js";
 import { notify } from "../lib/notify.js";
 import { emailMatchesWebsite } from "../lib/company.js";
+import { COMPANY_CHECKS, REQUIRED_CHECKS, VIEW_ALERT_PER_DAY } from "../lib/corporate-number.js";
 import { appUrl } from "../lib/email.js";
 import { localizeQuestion } from "../lib/interview-translations.js";
 import { enqueueEmail } from "../lib/email-queue.js";
@@ -86,7 +87,10 @@ adminRouter.get("/stats", async (_req, res) => {
     }),
   ]);
 
+  const companyAlerts = await busyCompanies();
+
   res.json({
+    companyAlerts,
     totals: { users, newUsers, admins, suspended, projects, certifications, attempts, openFeedback, comments, questions, pendingCompanies, failedEmails },
     outcomes: { students, completeProfiles, visibleStudents, approvedCompanies, companySearches, companyViews },
     signups,
@@ -104,6 +108,21 @@ adminRouter.get("/stats", async (_req, res) => {
 
 // ---------- Companies ----------
 
+/** Companies that opened an unusual number of portfolios in the last 24 hours: maybe collecting student data. */
+async function busyCompanies() {
+  const rows = await prisma.companyActivity.groupBy({
+    by: ["companyId"],
+    where: { type: "VIEW", createdAt: { gte: new Date(Date.now() - DAY) } },
+    _count: { _all: true },
+  });
+  const busy = rows.filter((r) => r._count._all >= VIEW_ALERT_PER_DAY);
+  if (busy.length === 0) return [];
+  const companies = await prisma.company.findMany({ where: { id: { in: busy.map((r) => r.companyId) } }, select: { id: true, name: true } });
+  return busy
+    .map((r) => ({ id: r.companyId, name: companies.find((c) => c.id === r.companyId)?.name ?? "", views: r._count._all }))
+    .sort((a, b) => b.views - a.views);
+}
+
 const COMPANY_STATUSES = ["PENDING", "APPROVED", "REJECTED"] as const;
 
 adminRouter.get("/companies", async (req, res) => {
@@ -115,9 +134,18 @@ adminRouter.get("/companies", async (req, res) => {
     include: { user: { select: { name: true, email: true, emailVerified: true } } },
   });
 
+  const recentViews = await prisma.companyActivity.groupBy({
+    by: ["companyId"],
+    where: { type: "VIEW", companyId: { in: companies.map((c) => c.id) }, createdAt: { gte: new Date(Date.now() - DAY) } },
+    _count: { _all: true },
+  });
+  const viewsById = new Map(recentViews.map((r) => [r.companyId, r._count._all]));
+
   res.json({
+    viewAlertPerDay: VIEW_ALERT_PER_DAY,
     companies: companies.map(({ user, ...company }) => ({
       ...company,
+      viewsLast24h: viewsById.get(company.id) ?? 0,
       contactName: user.name,
       contactEmail: user.email,
       emailConfirmed: Boolean(user.emailVerified),
@@ -125,6 +153,16 @@ adminRouter.get("/companies", async (req, res) => {
       emailMatchesWebsite: emailMatchesWebsite(user.email, company.website),
     })),
   });
+});
+
+/** The admin's checklist for one company (法人番号, social insurance, ...). Saved as they tick each box. */
+adminRouter.put("/companies/:id/checks", async (req, res) => {
+  const { checks } = parse(z.strictObject({ checks: z.array(z.enum(COMPANY_CHECKS)).max(COMPANY_CHECKS.length) }), req.body);
+  const company = await prisma.company.findUnique({ where: { id: String(req.params["id"]) }, select: { id: true } });
+  if (!company) throw new HttpError(404, "Company not found");
+
+  const updated = await prisma.company.update({ where: { id: company.id }, data: { checks: [...new Set(checks)] } });
+  res.json({ company: updated });
 });
 
 const reviewSchema = z.object({
@@ -142,12 +180,22 @@ adminRouter.post("/companies/:id/review", async (req, res) => {
   if (body.status === "APPROVED" && !company.user.emailVerified) {
     throw new HttpError(400, "This company hasn't confirmed its email address yet.");
   }
+  if (body.status === "APPROVED" && !company.corporateNumber) {
+    throw new HttpError(400, "This company hasn't entered its corporate number (法人番号) yet.", "CORPORATE_NUMBER_MISSING");
+  }
+  if (body.status === "APPROVED" && !REQUIRED_CHECKS.every((c) => company.checks.includes(c))) {
+    throw new HttpError(400, "Check the company's registration and social insurance before approving it.", "CHECKS_REQUIRED");
+  }
 
   const updated = await prisma.company.update({
     where: { id: company.id },
     data: { status: body.status, reviewNote: body.status === "REJECTED" ? (body.note ?? null) : null, reviewedAt: new Date() },
   });
-  await audit(req.auth!.userId, `company.${body.status.toLowerCase()}`, "Company", company.id, { name: company.name });
+  await audit(req.auth!.userId, `company.${body.status.toLowerCase()}`, "Company", company.id, {
+    name: company.name,
+    corporateNumber: company.corporateNumber,
+    checks: company.checks,
+  });
 
   const approved = body.status === "APPROVED";
   await enqueueEmail(

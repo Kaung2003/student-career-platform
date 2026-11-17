@@ -19,6 +19,7 @@ export function CompanyProfile() {
   const [error, setError] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [website, setWebsite] = useState("");
+  const [corporateNumber, setCorporateNumber] = useState("");
   const [industry, setIndustry] = useState("");
   const [location, setLocation] = useState("");
   const [description, setDescription] = useState("");
@@ -30,6 +31,7 @@ export function CompanyProfile() {
         if (!company) return;
         setName(company.name);
         setWebsite(company.website);
+        setCorporateNumber(company.corporateNumber ?? "");
         setIndustry(company.industry ?? "");
         setLocation(company.location ?? "");
         setDescription(company.description ?? "");
@@ -43,7 +45,7 @@ export function CompanyProfile() {
     setError(null);
     setSaving(true);
     try {
-      await api.put("/company/me", { name, website, industry, location, description });
+      await api.put("/company/me", { name, website, corporateNumber, industry, location, description });
       toast(t("settings.saved"));
       navigate("/company");
     } catch (err) {
@@ -64,6 +66,9 @@ export function CompanyProfile() {
           </Field>
           <Field label={t("company.website")} hint={t("company.identityHint")}>
             <input required maxLength={300} inputMode="url" value={website} onChange={(e) => setWebsite(e.target.value)} className={inputClass} />
+          </Field>
+          <Field label={t("company.corporateNumber")} hint={t("company.identityHint")}>
+            <input required inputMode="numeric" maxLength={20} value={corporateNumber} onChange={(e) => setCorporateNumber(e.target.value)} className={inputClass} />
           </Field>
           <Field label={t("company.industry")}>
             <input maxLength={80} value={industry} onChange={(e) => setIndustry(e.target.value)} className={inputClass} />

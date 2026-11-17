@@ -8,6 +8,7 @@ export interface CompanySignUp {
   name: string;
   email: string;
   password: string;
+  corporateNumber: string;
   acceptTerms: boolean;
 }
 

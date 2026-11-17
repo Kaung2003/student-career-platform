@@ -14,6 +14,7 @@ export function CompanyRegister() {
   const { t } = useI18n();
   const [companyName, setCompanyName] = useState("");
   const [website, setWebsite] = useState("");
+  const [corporateNumber, setCorporateNumber] = useState("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -27,9 +28,10 @@ export function CompanyRegister() {
     setError(null);
     setSubmitting(true);
     try {
-      setSentTo(await registerCompany({ companyName, website, name, email, password, acceptTerms }));
+      setSentTo(await registerCompany({ companyName, website, corporateNumber, name, email, password, acceptTerms }));
     } catch (err) {
       if (err instanceof ApiError && err.code === "WORK_EMAIL_REQUIRED") setError(t("company.workEmailRequired"));
+      else if (err instanceof ApiError && err.code === "CORPORATE_NUMBER_TAKEN") setError(t("company.corporateNumberTaken"));
       else setError(err instanceof ApiError ? err.message : t("auth.registerFailed"));
     } finally {
       setSubmitting(false);
@@ -47,6 +49,9 @@ export function CompanyRegister() {
           </Field>
           <Field label={t("company.website")}>
             <input required maxLength={300} autoComplete="url" inputMode="url" placeholder="example.co.jp" value={website} onChange={(e) => setWebsite(e.target.value)} className={inputClass} />
+          </Field>
+          <Field label={t("company.corporateNumber")} hint={t("company.corporateNumberHint")}>
+            <input required inputMode="numeric" maxLength={20} placeholder="1234567890123" value={corporateNumber} onChange={(e) => setCorporateNumber(e.target.value)} className={inputClass} />
           </Field>
           <Field label={t("company.contactName")}>
             <input required maxLength={80} autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} className={inputClass} />

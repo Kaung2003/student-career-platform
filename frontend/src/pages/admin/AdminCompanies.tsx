@@ -4,7 +4,7 @@ import { useUi } from "../../context/UiContext";
 import { useI18n } from "../../i18n/I18nContext";
 import { api, ApiError } from "../../lib/api";
 import { COMPANY_STATUS_TONE } from "../../lib/company";
-import type { AdminCompany, CompanyStatus } from "../../lib/types";
+import { REQUIRED_CHECKS, type AdminCompany, type CompanyCheck, type CompanyStatus } from "../../lib/types";
 import { PageHeader } from "../../components/PageHeader";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
@@ -14,6 +14,7 @@ import { Field, inputClass } from "../../components/ui/Field";
 import { Modal } from "../../components/ui/Modal";
 import { Skeleton } from "../../components/ui/Skeleton";
 import { BuildingIcon, ExternalLinkIcon } from "../../components/icons";
+import { CompanyChecklist } from "../../components/CompanyChecklist";
 
 const FILTERS: CompanyStatus[] = ["PENDING", "APPROVED", "REJECTED"];
 
@@ -33,11 +34,20 @@ export function AdminCompanies() {
   useEffect(() => {
     setLoading(true);
     api
-      .get<{ companies: AdminCompany[] }>(`/admin/companies?status=${status}`)
-      .then((res) => setCompanies(res.companies))
+      .get<{ companies: AdminCompany[]; viewAlertPerDay: number }>(`/admin/companies?status=${status}`)
+      .then((res) => {
+        setCompanies(res.companies);
+        setViewAlert(res.viewAlertPerDay);
+      })
       .catch(() => setCompanies([]))
       .finally(() => setLoading(false));
   }, [status]);
+
+  const [viewAlert, setViewAlert] = useState(50);
+
+  function setChecks(id: string, checks: CompanyCheck[]) {
+    setCompanies((list) => list.map((c) => (c.id === id ? { ...c, checks } : c)));
+  }
 
   async function review(company: AdminCompany, next: "APPROVED" | "REJECTED", reason?: string) {
     setBusyId(company.id);
@@ -58,7 +68,7 @@ export function AdminCompanies() {
     <div>
       <PageHeader title={t("admin.companies.title")} description={t("admin.companies.description")} />
       <p className="mb-6 rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-600 dark:bg-slate-900 dark:text-slate-400">
-        {t("admin.companies.testTip", { example: testAddress })}
+        {t("admin.companies.testTip", { example: testAddress })} {t("admin.companies.testNumberTip")}
       </p>
 
       <div className="scroll-row mb-5 flex gap-2">
@@ -84,7 +94,16 @@ export function AdminCompanies() {
                 <Badge tone={company.emailMatchesWebsite ? "green" : "red"}>
                   {t(company.emailMatchesWebsite ? "admin.companies.domainMatch" : "admin.companies.domainMismatch")}
                 </Badge>
+                {company.viewsLast24h >= viewAlert && <Badge tone="red">{t("admin.companies.manyViews", { count: company.viewsLast24h })}</Badge>}
               </div>
+              <p className="mt-2 text-sm text-slate-700 dark:text-slate-300">
+                {t("company.corporateNumber")}:{" "}
+                {company.corporateNumber ? (
+                  <span className="font-mono font-medium">{company.corporateNumber}</span>
+                ) : (
+                  <span className="font-medium text-red-600 dark:text-red-400">{t("admin.companies.noCorporateNumber")}</span>
+                )}
+              </p>
               <a href={company.website} target="_blank" rel="noreferrer" className="mt-2 inline-flex max-w-full items-center gap-1.5 text-sm text-blue-600 hover:underline dark:text-blue-400">
                 <span className="truncate">{company.website}</span> <ExternalLinkIcon className="h-3.5 w-3.5 shrink-0" />
               </a>
@@ -94,9 +113,14 @@ export function AdminCompanies() {
               <p className="mt-1 text-xs text-slate-500 dark:text-slate-500">{new Date(company.createdAt).toLocaleDateString(locale)}</p>
               {company.description && <p className="mt-2 whitespace-pre-wrap text-sm text-slate-600 dark:text-slate-400">{company.description}</p>}
               {company.reviewNote && <p className="mt-2 text-sm text-red-600 dark:text-red-400">{t("company.reason", { reason: company.reviewNote })}</p>}
-              <div className="mt-4 flex flex-wrap gap-2">
+              {company.status !== "APPROVED" && <CompanyChecklist company={company} onChange={(checks) => setChecks(company.id, checks)} />}
+              <div className="mt-4 flex flex-wrap items-center gap-2">
                 {company.status !== "APPROVED" && (
-                  <Button size="sm" disabled={busyId === company.id || !company.emailConfirmed} onClick={() => void review(company, "APPROVED")}>
+                  <Button
+                    size="sm"
+                    disabled={busyId === company.id || !company.emailConfirmed || !company.corporateNumber || !REQUIRED_CHECKS.every((c) => company.checks.includes(c))}
+                    onClick={() => void review(company, "APPROVED")}
+                  >
                     {t("admin.companies.approve")}
                   </Button>
                 )}
@@ -104,6 +128,9 @@ export function AdminCompanies() {
                   <Button size="sm" variant="secondary" disabled={busyId === company.id} onClick={() => setRejecting(company)}>
                     {t("admin.companies.reject")}
                   </Button>
+                )}
+                {company.status !== "APPROVED" && !REQUIRED_CHECKS.every((c) => company.checks.includes(c)) && (
+                  <span className="text-xs text-slate-500 dark:text-slate-400">{t("admin.checks.approveHint")}</span>
                 )}
               </div>
             </Card>

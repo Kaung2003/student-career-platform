@@ -323,6 +323,10 @@ model Company {
   reviewedAt  DateTime?
   // When the company agreed to use student data only for recruiting (個人情報保護法).
   termsAcceptedAt DateTime?
+  // 法人番号 from the National Tax Agency. Null only for companies that signed up before it was asked.
+  corporateNumber String?   @unique
+  // What the admin checked before approving (see COMPANY_CHECKS), so the review is the same every time.
+  checks          String[]  @default([])
 
   user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId      String        @unique
